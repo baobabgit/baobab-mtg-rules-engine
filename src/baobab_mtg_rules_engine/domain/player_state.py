@@ -33,6 +33,7 @@ class PlayerState:
         self._player_index: int = player_index
         self._name: str = name
         self._life_total: int = life_total
+        self._floating_mana: int = 0
         self._zones: dict[ZoneType, Zone] = {
             zone_type: Zone(zone_type, player_index) for zone_type in PLAYER_OWNED_ZONE_TYPES
         }
@@ -51,6 +52,26 @@ class PlayerState:
     def life_total(self) -> int:
         """:return: Points de vie actuels."""
         return self._life_total
+
+    @property
+    def floating_mana(self) -> int:
+        """:return: Mana résiduel simplifié (unités entières, vidé au nettoyage)."""
+        return self._floating_mana
+
+    def add_floating_mana(self, amount: int) -> None:
+        """Ajoute du mana flottant (modèle minimal pour tests et futur pool).
+
+        :param amount: Quantité strictement positive.
+        :raises InvalidGameStateError: si ``amount`` n'est pas positive.
+        """
+        if amount < 1:
+            msg = "Le mana ajouté doit être au moins 1."
+            raise InvalidGameStateError(msg, field_name="amount")
+        self._floating_mana += amount
+
+    def clear_floating_mana(self) -> None:
+        """Remet le mana résiduel à zéro (étape de nettoyage)."""
+        self._floating_mana = 0
 
     def zone(self, zone_type: ZoneType) -> Zone:
         """Accès à une zone possédée par ce joueur.

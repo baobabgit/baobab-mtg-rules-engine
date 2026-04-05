@@ -87,6 +87,7 @@ class GameFactory:
             else int(rng.randrange(2))
         )
         state.replace_turn_state(TurnState.start_first_turn(starting_player))
+        state.establish_duel_opening_player(starting_player)
         state.record_engine_event(
             EventType.SETUP_STARTING_PLAYER_DETERMINED,
             (("starting_player", starting_player),),

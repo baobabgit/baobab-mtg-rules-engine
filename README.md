@@ -99,6 +99,20 @@ game = factory.create_game(request, CallbackMulliganChoice(lambda _p, _d, _h: Fa
 
 Pour brancher le catalogue distribué Baobab, utiliser `BaobabMtgCatalogAdapter` si le paquet `baobab-mtg-catalog` est installé et expose l'API attendue ; sinon une `UnsupportedRuleException` est levée.
 
+## Boucle de tour et priorité (duel)
+
+Le paquet `baobab_mtg_rules_engine.engine` fournit `TurnManager` pour enchaîner les étapes (dégagement → entretien → pioche → principales → combat simplifié → fin → nettoyage), gérer la **priorité** et avancer lorsque la **pile est vide** et que **chaque joueur a passé** successivement. Le premier tour du joueur qui a commencé le duel **ne pioche pas** (aligné sur la règle usuelle à deux joueurs). Avant chaque passe, un port `PriorityActionLegalityPort` peut valider l’état (défaut : aucune contrainte).
+
+```python
+from baobab_mtg_rules_engine.engine import TurnManager
+
+tm = TurnManager(game.state)
+tm.open_current_step()  # chaîne UNTAP → UPKEEP, ouvre la priorité
+tm.pass_priority()      # à répéter côté interface / script
+```
+
+Le mana résiduel modélisé sur `PlayerState.floating_mana` est vidé lors du nettoyage, avec événement `FLOATING_MANA_CLEARED` dans le journal.
+
 ## Vérification qualité (pipeline local)
 
 Après `pip install -e ".[dev]"`, exécuter dans l’ordre :

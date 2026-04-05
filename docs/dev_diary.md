@@ -2,6 +2,28 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-05 — feature `03_turn_loop_priority`
+
+### Modifications
+
+- Paquet `engine` : `TurnManager` (orchestration), `PriorityManager` (pile vide / non vide), `StepTransitionService` (ordre `STANDARD_DUEL_STEP_ORDER`), port de légalité avant `pass_priority`
+- `GameState` : champs priorité + `establish_duel_opening_player` ; `PlayerState` : mana flottant entier vidé au nettoyage
+- `domain.step` : `COMBAT_STEPS`, `STANDARD_DUEL_STEP_ORDER` (évite la duplication avec le moteur)
+- Nouveaux `EventType` pour étapes, priorité, pioche et mana
+- Tests miroir `tests/baobab_mtg_rules_engine/engine/` ; README ; CHANGELOG / version **0.4.0** ; couverture **100 %**
+
+### Buts
+
+- Faire avancer un duel de façon déterministe et traçable sans logique « joueur » dans le moteur (passes injectées)
+
+### Impact
+
+- Base pour la pile, les sorts et le combat détaillé dans les prochaines features
+
+### Note PR / merge
+
+- Branche `feature/03-turn-loop-priority` → PR vers `main` ; merge après revue et CI locale au vert.
+
 ## 2026-04-05 — feature `02_game_setup_and_zones`
 
 ### Modifications

@@ -32,3 +32,17 @@ class TestPlayerState:
         """Un index joueur négatif est refusé."""
         with pytest.raises(InvalidGameStateError, match="player_index"):
             PlayerState(-1, name="x")
+
+    def test_add_floating_mana_positive(self) -> None:
+        """Le mana flottant s'accumule puis se vide."""
+        player = PlayerState(0, name="Mana")
+        player.add_floating_mana(2)
+        assert player.floating_mana == 2
+        player.clear_floating_mana()
+        assert player.floating_mana == 0
+
+    def test_add_floating_mana_non_positive_rejected(self) -> None:
+        """Quantité de mana nulle ou négative refusée."""
+        player = PlayerState(0, name="Mana")
+        with pytest.raises(InvalidGameStateError, match="mana"):
+            player.add_floating_mana(0)
