@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import random
+
 from baobab_mtg_rules_engine.domain.event_type import EventType
 from baobab_mtg_rules_engine.domain.game_event import GameEvent
 from baobab_mtg_rules_engine.domain.game_object import GameObject
@@ -12,6 +14,7 @@ from baobab_mtg_rules_engine.domain.turn_state import TurnState
 from baobab_mtg_rules_engine.domain.zone import Zone
 from baobab_mtg_rules_engine.domain.zone_location import ZoneLocation
 from baobab_mtg_rules_engine.domain.zone_type import ZoneType
+from baobab_mtg_rules_engine.exceptions.insufficient_library_error import InsufficientLibraryError
 from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
 
 
@@ -89,6 +92,63 @@ class GameState:
     def events(self) -> tuple[GameEvent, ...]:
         """:return: Copie immuable du journal d'événements."""
         return tuple(self._events)
+
+    def record_engine_event(
+        self,
+        event_type: EventType,
+        payload: tuple[tuple[str, str | int], ...] = (),
+    ) -> None:
+        """Ajoute un événement moteur au journal (setup, instrumentation, etc.).
+
+        Complète les événements générés automatiquement par les mutations d'objets.
+
+        :param event_type: Type fonctionnel à tracer.
+        :param payload: Données contextuelles sérialisables.
+        """
+        self._append_event(event_type, payload)
+
+    def shuffle_player_library(self, player_index: int, rng: random.Random) -> None:
+        """Mélange la bibliothèque d'un joueur de façon déterministe via ``rng``.
+
+        :param player_index: Joueur concerné.
+        :param rng: Générateur pseudo-aléatoire déjà positionné.
+        """
+        library_zone = self._players[player_index].zone(ZoneType.LIBRARY)
+        ordered = list(library_zone.object_ids())
+        rng.shuffle(ordered)
+        library_zone.replace_ordered_contents(tuple(ordered))
+
+    def draw_cards_from_library_to_hand(
+        self, player_index: int, count: int
+    ) -> tuple[GameObjectId, ...]:
+        """Pioche depuis le haut de la bibliothèque vers la main.
+
+        Ne déclenche aucune règle de défaite : une pioche impossible lève une erreur
+        de validation explicite (setup ou règles futures), après vérification du nombre
+        de cartes disponibles (aucune mutation si la pioche est impossible).
+
+        :param player_index: Joueur qui pioche.
+        :param count: Nombre de cartes demandé.
+        :return: Identifiants piochés dans l'ordre (premier = plus ancien sur le dessus).
+        :raises InsufficientLibraryError: si la bibliothèque contient moins de ``count`` cartes.
+        """
+        if count < 0:
+            msg = "Le nombre de cartes à piocher ne peut pas être négatif."
+            raise InvalidGameStateError(msg, field_name="count")
+        library_zone = self._players[player_index].zone(ZoneType.LIBRARY)
+        available = library_zone.object_ids()
+        if len(available) < count:
+            msg = "Bibliothèque insuffisante pour la pioche demandée."
+            raise InsufficientLibraryError(msg, field_name="library")
+        drawn: list[GameObjectId] = []
+        hand = ZoneLocation(player_index, ZoneType.HAND)
+        for _ in range(count):
+            library = self._players[player_index].zone(ZoneType.LIBRARY)
+            current = library.object_ids()
+            top = current[0]
+            self.relocate_preserving_identity(top, hand)
+            drawn.append(top)
+        return tuple(drawn)
 
     def replace_turn_state(self, turn_state: TurnState) -> None:
         """Remplace le tour courant (transition explicite, hors logique de règles).

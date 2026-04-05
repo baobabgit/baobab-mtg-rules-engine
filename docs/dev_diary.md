@@ -2,6 +2,28 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-05 — feature `02_game_setup_and_zones`
+
+### Modifications
+
+- Setup 1v1 déterministe : `GameFactory`, `GameSetupRequest`, validation `DeckValidator`, construction bibliothèque, mélange (`GameState.shuffle_player_library`), pioche initiale et mulligan (`MulliganPolicy`, port `MulliganChoicePort`)
+- Catalogue : `CardDefinitionPort`, `InMemoryCardCatalogAdapter`, `BaobabMtgCatalogAdapter` (refus explicite si paquet ou API absents)
+- `EventType` enrichi (`SETUP_*`), `GameState.draw_cards_from_library_to_hand` avec validation avant mutation, `InsufficientLibraryError` / `DeckValidationError`
+- Tests : setup nominal, graine, mulligan, pioche insuffisante sans défaite ni mutation partielle ; adaptateur catalogue mocké
+- README (exemple setup), CHANGELOG / version **0.3.0** ; couverture **100 %** sur le package
+
+### Buts
+
+- Démarrer une partie inspectable à deux decks valides, tracer le setup, garder le moteur découplé des décisions de mulligan (injection)
+
+### Impact
+
+- Base pour la boucle de tour et les règles in-game sans élargir Commander / sideboard complet
+
+### Note PR / merge
+
+- Branche `feature/02-game-setup-and-zones` : ouvrir PR vers `main` après revue ; merge lorsque la CI locale est au vert.
+
 ## 2026-04-05 — feature `01_core_domain_model`
 
 ### Modifications
