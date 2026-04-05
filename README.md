@@ -36,7 +36,37 @@ print(__version__)
 raise UnsupportedRuleException("Fonctionnalité non encore implémentée", rule_reference="XXX")
 ```
 
-Toute erreur spécifique au moteur dérive de `BaobabMtgRulesEngineException` (également exportée depuis le package racine).
+Toute erreur spécifique au moteur dérive de `BaobabMtgRulesEngineException` (également exportée depuis le package racine). Les erreurs de cohérence du domaine partie utilisent `InvalidGameStateError`.
+
+## Modèle de domaine (aperçu)
+
+Le sous-paquet `baobab_mtg_rules_engine.domain` expose les entités et value objects centraux : état à deux joueurs, zones, tour (`Phase` / `Step`), identifiants d’objets stables et distinction **référence de carte** (`CardReference`) vs **objet en partie** (`InGameCard` et sous-classes).
+
+```python
+from baobab_mtg_rules_engine.domain import (
+    CardReference,
+    Game,
+    GameState,
+    Permanent,
+    SpellOnStack,
+    ZoneLocation,
+    ZoneType,
+)
+
+game = Game.create_two_player("demo")
+state = game.state
+card_id = state.issue_object_id()
+spell = SpellOnStack(card_id, CardReference("oracle:12345"))
+state.register_object_at(spell, ZoneLocation(None, ZoneType.STACK))
+new_id = state.migrate_in_game_card_as_new_instance(
+    card_id,
+    target=ZoneLocation(0, ZoneType.BATTLEFIELD),
+    new_kind=Permanent,
+)
+assert new_id != card_id
+```
+
+Les déplacements peuvent soit **conserver** l’identifiant (`relocate_preserving_identity`), soit créer une **nouvelle instance logique** avec un nouvel identifiant (`migrate_in_game_card_as_new_instance`).
 
 ## Vérification qualité (pipeline local)
 

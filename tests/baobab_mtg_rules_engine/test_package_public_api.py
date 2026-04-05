@@ -20,6 +20,7 @@ class TestPackagePublicApi:
         assert engine_pkg.__version__  # non vide une fois le package installé
 
         assert hasattr(engine_pkg, "BaobabMtgRulesEngineException")
+        assert hasattr(engine_pkg, "InvalidGameStateError")
         assert hasattr(engine_pkg, "UnsupportedRuleException")
         assert hasattr(engine_pkg, "ValidationException")
 
@@ -47,6 +48,7 @@ class TestPackagePublicApi:
         "name",
         [
             "BaobabMtgRulesEngineException",
+            "InvalidGameStateError",
             "UnsupportedRuleException",
             "ValidationException",
         ],

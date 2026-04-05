@@ -1,0 +1,65 @@
+"""État d'un joueur : points de vie, nom affichable et zones possédées."""
+
+from baobab_mtg_rules_engine.domain.zone import Zone
+from baobab_mtg_rules_engine.domain.zone_type import ZoneType
+from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
+
+PLAYER_OWNED_ZONE_TYPES: tuple[ZoneType, ...] = (
+    ZoneType.LIBRARY,
+    ZoneType.HAND,
+    ZoneType.GRAVEYARD,
+    ZoneType.BATTLEFIELD,
+    ZoneType.EXILE,
+    ZoneType.COMMAND,
+    ZoneType.SIDEBOARD,
+)
+
+
+class PlayerState:
+    """Agrégat des zones et attributs scalaires d'un joueur.
+
+    :param player_index: Index stable du joueur dans la partie (0 ou 1 pour deux joueurs).
+    :param name: Nom ou pseudo pour inspection (hors stratégie IA).
+    :param life_total: Points de vie courants.
+    """
+
+    def __init__(self, player_index: int, *, name: str, life_total: int = 20) -> None:
+        if player_index < 0:
+            msg = "player_index ne peut pas être négatif."
+            raise InvalidGameStateError(msg, field_name="player_index")
+        if life_total < 0:
+            msg = "life_total ne peut pas être négatif."
+            raise InvalidGameStateError(msg, field_name="life_total")
+        self._player_index: int = player_index
+        self._name: str = name
+        self._life_total: int = life_total
+        self._zones: dict[ZoneType, Zone] = {
+            zone_type: Zone(zone_type, player_index) for zone_type in PLAYER_OWNED_ZONE_TYPES
+        }
+
+    @property
+    def player_index(self) -> int:
+        """:return: Index du joueur."""
+        return self._player_index
+
+    @property
+    def name(self) -> str:
+        """:return: Nom d'inspection du joueur."""
+        return self._name
+
+    @property
+    def life_total(self) -> int:
+        """:return: Points de vie actuels."""
+        return self._life_total
+
+    def zone(self, zone_type: ZoneType) -> Zone:
+        """Accès à une zone possédée par ce joueur.
+
+        :param zone_type: Type de zone demandé (hors pile).
+        :return: Zone correspondante.
+        :raises InvalidGameStateError: si ``zone_type`` est la pile.
+        """
+        if zone_type is ZoneType.STACK:
+            msg = "La pile n'est pas une zone possédée par un joueur."
+            raise InvalidGameStateError(msg, field_name="zone_type")
+        return self._zones[zone_type]
