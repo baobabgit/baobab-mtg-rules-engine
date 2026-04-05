@@ -39,6 +39,8 @@ class TurnManager:
     def open_current_step(self) -> None:
         """Applique les effets d'entrée de l'étape courante et prépare la priorité si besoin."""
         step = self._state.turn_state.step
+        if step is Step.BEGIN_COMBAT:
+            self._state.turn_engine_begin_combat_declarations()
         if step is Step.UNTAP:
             self._emit_step_entered()
             self._replace_step_only(Step.UPKEEP)
@@ -95,6 +97,7 @@ class TurnManager:
         ts = self._state.turn_state
         new_ts = self._steps.turn_state_after_cleanup(ts)
         self._state.replace_turn_state(new_ts)
+        self._state.turn_engine_reset_turn_resource_counters()
         self._state.record_engine_event(
             EventType.TURN_ROLLED_TO_NEXT_PLAYER,
             (

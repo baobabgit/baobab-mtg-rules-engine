@@ -25,3 +25,8 @@ class EventType(Enum):
     TURN_DRAW_PERFORMED = auto()
     TURN_DRAW_STEP_SKIPPED_FIRST_DUEL_TURN = auto()
     FLOATING_MANA_CLEARED = auto()
+    LAND_PLAYED = auto()
+    SPELL_CAST = auto()
+    SIMPLE_ABILITY_ACTIVATED = auto()
+    ATTACKER_DECLARED = auto()
+    BLOCKER_DECLARED = auto()

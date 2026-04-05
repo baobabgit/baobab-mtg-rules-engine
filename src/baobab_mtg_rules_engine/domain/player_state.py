@@ -73,6 +73,22 @@ class PlayerState:
         """Remet le mana résiduel à zéro (étape de nettoyage)."""
         self._floating_mana = 0
 
+    def spend_floating_mana(self, amount: int) -> None:
+        """Dépense du mana flottant.
+
+        :param amount: Quantité positive.
+        :raises InvalidGameStateError: si le montant est invalide ou le pool insuffisant.
+        """
+        if amount < 0:
+            msg = "Le mana à dépenser ne peut pas être négatif."
+            raise InvalidGameStateError(msg, field_name="amount")
+        if amount == 0:
+            return
+        if self._floating_mana < amount:
+            msg = "Mana flottant insuffisant pour ce coût."
+            raise InvalidGameStateError(msg, field_name="floating_mana")
+        self._floating_mana -= amount
+
     def zone(self, zone_type: ZoneType) -> Zone:
         """Accès à une zone possédée par ce joueur.
 

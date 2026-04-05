@@ -5,6 +5,19 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format s’inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.5.0] - 2026-04-05
+
+### Added
+
+- Paquet `actions` : modèle d’actions supportées (`SupportedActionKind`, sous-classes `GameAction`) : passe, terrain, sort, capacité activée simple, attaquants / bloqueurs
+- `CardGameplayPort` et extension de `InMemoryCardCatalogAdapter` pour types, coûts génériques et capacités simples
+- `LegalActionService` : liste déterministe d’actions légales et `apply_action` après re-validation d’appartenance à l’ensemble courant
+- `IllegalGameActionError` ; `TurnManager` réinitialise les compteurs de tour au passage de joueur et vide les déclarations de combat à l’entrée en `BEGIN_COMBAT`
+
+### Tests
+
+- `tests/baobab_mtg_rules_engine/engine/test_legal_action_service.py`, miroir `tests/baobab_mtg_rules_engine/actions/`, couverture `BaobabMtgCatalogAdapter` (gameplay)
+
 ## [0.4.0] - 2026-04-05
 
 ### Added

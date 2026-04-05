@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baobab-mtg-rules-engine"
-version = "0.4.0"
+version = "0.5.0"
 description = "Moteur de règles Magic: The Gathering déterministe et inspectable pour le projet Baobab."
 readme = "README.md"
 requires-python = ">=3.11"

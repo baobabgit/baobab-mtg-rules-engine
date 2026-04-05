@@ -8,6 +8,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from baobab_mtg_rules_engine.exceptions import (
     BaobabMtgRulesEngineException,
+    IllegalGameActionError,
     InvalidGameStateError,
     UnsupportedRuleException,
     ValidationException,
@@ -21,6 +22,7 @@ except PackageNotFoundError:
 __all__ = [
     "__version__",
     "BaobabMtgRulesEngineException",
+    "IllegalGameActionError",
     "InvalidGameStateError",
     "UnsupportedRuleException",
     "ValidationException",

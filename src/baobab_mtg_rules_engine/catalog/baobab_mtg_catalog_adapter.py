@@ -6,10 +6,11 @@ import importlib
 from typing import Any
 
 from baobab_mtg_rules_engine.catalog.card_definition_port import CardDefinitionPort
+from baobab_mtg_rules_engine.catalog.card_gameplay_port import CardGameplayPort
 from baobab_mtg_rules_engine.exceptions.unsupported_rule_exception import UnsupportedRuleException
 
 
-class BaobabMtgCatalogAdapter(CardDefinitionPort):
+class BaobabMtgCatalogAdapter(CardDefinitionPort, CardGameplayPort):
     """Pont vers ``baobab-mtg-catalog`` lorsque l'API attendue est disponible.
 
     Si le module est absent ou n'expose pas ``is_supported_catalog_key`` et
@@ -48,3 +49,34 @@ class BaobabMtgCatalogAdapter(CardDefinitionPort):
         """:return: Délégation au catalogue Baobab."""
         fn = self._catalog.allows_unlimited_copies
         return bool(fn(catalog_key))
+
+    def is_land_catalog_key(self, catalog_key: str) -> bool:
+        """:raises UnsupportedRuleException: métadonnées de jeu non branchées sur ce catalogue."""
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def is_creature_catalog_key(self, catalog_key: str) -> bool:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def is_sorcery_speed_spell_catalog_key(self, catalog_key: str) -> bool:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def is_instant_speed_spell_catalog_key(self, catalog_key: str) -> bool:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def spell_generic_mana_cost(self, catalog_key: str) -> int:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def simple_activated_ability_costs(self, catalog_key: str) -> tuple[int, ...]:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
