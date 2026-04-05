@@ -2,6 +2,23 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-05 — feature `01_core_domain_model`
+
+### Modifications
+
+- Ajout du paquet `domain` : `Game`, `GameState`, `PlayerState`, `Zone`, `ZoneLocation`, `TurnState`, enums `ZoneType`, `Phase`, `Step`, objets `GameObject` / `InGameCard` / `Permanent` / `SpellOnStack` / `AbilityOnStack`, `GameObjectId`, `CardReference`, `GameEvent`, protocoles `AbilityLike` / `EffectLike`
+- Exception `InvalidGameStateError` exportée au niveau racine
+- Tests miroir, README / CHANGELOG / version **0.2.0**
+- Contrôles : black, flake8, mypy, pylint (10/10), bandit, pytest — couverture **100 %** sur le package
+
+### Buts
+
+- Représenter une partie à deux joueurs inspectable, avec historique d’événements minimal et identifiants d’objets déterministes
+
+### Impact
+
+- Base pour les features boucle de tour, pile et règles sans introduire d’exécution de règles dans cette livraison
+
 ## 2026-04-05 (fin de journée)
 
 ### Modifications

@@ -1,0 +1,34 @@
+"""Tests pour :class:`PlayerState`."""
+
+import pytest
+
+from baobab_mtg_rules_engine.domain.player_state import PlayerState
+from baobab_mtg_rules_engine.domain.zone_type import ZoneType
+from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
+
+
+class TestPlayerState:
+    """Zones possédées et validations de base."""
+
+    def test_default_zones_exist(self) -> None:
+        """Chaque zone joueur attendue est initialisée."""
+        player = PlayerState(0, name="Alice")
+        hand = player.zone(ZoneType.HAND)
+        assert hand.zone_type is ZoneType.HAND
+        assert hand.owner_player_index == 0
+
+    def test_stack_zone_forbidden(self) -> None:
+        """La pile n'est pas accessible via :meth:`PlayerState.zone`."""
+        player = PlayerState(0, name="Bob")
+        with pytest.raises(InvalidGameStateError, match="pile"):
+            player.zone(ZoneType.STACK)
+
+    def test_negative_life_rejected(self) -> None:
+        """Les points de vie négatifs sont refusés à la construction."""
+        with pytest.raises(InvalidGameStateError, match="life_total"):
+            PlayerState(0, name="x", life_total=-1)
+
+    def test_negative_player_index_rejected(self) -> None:
+        """Un index joueur négatif est refusé."""
+        with pytest.raises(InvalidGameStateError, match="player_index"):
+            PlayerState(-1, name="x")
