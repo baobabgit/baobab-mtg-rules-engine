@@ -5,6 +5,19 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format s’inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.4.0] - 2026-04-05
+
+### Added
+
+- Paquet `baobab_mtg_rules_engine.engine` : `TurnManager`, `PriorityManager`, `StepTransitionService`, port `PriorityActionLegalityPort` et `NullPriorityActionLegalityPort`
+- Boucle de tour duel : enchaînement UNTAP → … → CLEANUP, priorité à pile vide (deux passes), saut de pioche du premier tour du duel, vidage du mana flottant au nettoyage
+- `GameState` : priorité inspectable, compteur de passes à pile vide, `establish_duel_opening_player` ; `PlayerState.floating_mana` ; constantes `COMBAT_STEPS` et `STANDARD_DUEL_STEP_ORDER` sur `domain.step`
+- `EventType` : `TURN_STEP_ENTERED`, `TURN_STEP_ADVANCED`, `TURN_ROLLED_TO_NEXT_PLAYER`, `PRIORITY_*`, `TURN_DRAW_*`, `FLOATING_MANA_CLEARED`
+
+### Tests
+
+- `tests/baobab_mtg_rules_engine/engine/` : progression de tour, priorité, pile non vide, légalité avant passe
+
 ## [0.3.0] - 2026-04-05
 
 ### Added

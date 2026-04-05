@@ -33,14 +33,28 @@ class Step(Enum):
             return Phase.BEGINNING
         if self is Step.MAIN_PRECOMBAT:
             return Phase.PRECOMBAT_MAIN
-        if self in (
-            Step.BEGIN_COMBAT,
-            Step.DECLARE_ATTACKERS,
-            Step.DECLARE_BLOCKERS,
-            Step.COMBAT_DAMAGE,
-            Step.END_COMBAT,
-        ):
+        if self in COMBAT_STEPS:
             return Phase.COMBAT
         if self is Step.MAIN_POSTCOMBAT:
             return Phase.POSTCOMBAT_MAIN
         return Phase.ENDING
+
+
+COMBAT_STEPS: tuple[Step, ...] = (
+    Step.BEGIN_COMBAT,
+    Step.DECLARE_ATTACKERS,
+    Step.DECLARE_BLOCKERS,
+    Step.COMBAT_DAMAGE,
+    Step.END_COMBAT,
+)
+
+STANDARD_DUEL_STEP_ORDER: tuple[Step, ...] = (
+    Step.UNTAP,
+    Step.UPKEEP,
+    Step.DRAW,
+    Step.MAIN_PRECOMBAT,
+    *COMBAT_STEPS,
+    Step.MAIN_POSTCOMBAT,
+    Step.END_TURN,
+    Step.CLEANUP,
+)

@@ -179,6 +179,23 @@ class TestGameState:
             state._zone_for_location(cast(Any, loc))
 
 
+class TestGameStateDuelAndPriorityEngineApi:
+    """Paramètres de duel et API réservée au moteur de tour."""
+
+    @pytest.mark.parametrize("bad_index", (-1, 2))
+    def test_establish_duel_opening_player_rejects_invalid_index(self, bad_index: int) -> None:
+        """Seuls 0 et 1 sont acceptés pour le premier joueur du duel."""
+        state = GameState.new_two_player()
+        with pytest.raises(InvalidGameStateError, match="duel"):
+            state.establish_duel_opening_player(bad_index)
+
+    def test_turn_engine_set_priority_rejects_invalid_index(self) -> None:
+        """L'assignation de priorité refuse un index hors duel."""
+        state = GameState.new_two_player()
+        with pytest.raises(InvalidGameStateError, match="priorité"):
+            state.turn_engine_set_priority_player(99)
+
+
 class TestGameStateLibraryDrawAndShuffle:
     """Pioche, mélange et événements moteur sans défaite implicite."""
 

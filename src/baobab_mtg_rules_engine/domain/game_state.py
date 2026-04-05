@@ -18,7 +18,7 @@ from baobab_mtg_rules_engine.exceptions.insufficient_library_error import Insuff
 from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
 
 
-class GameState:
+class GameState:  # pylint: disable=too-many-public-methods
     """État mutable et inspectable d'une partie à deux joueurs.
 
     Les identifiants d'objets sont émis de façon déterministe (compteur monotone).
@@ -43,6 +43,9 @@ class GameState:
         self._events: list[GameEvent] = []
         self._event_sequence: int = 0
         self._turn: TurnState = TurnState.start_first_turn(0)
+        self._duel_first_player_index: int = 0
+        self._priority_player_index: int = self._turn.active_player_index
+        self._consecutive_empty_stack_passes: int = 0
 
     @classmethod
     def new_two_player(
@@ -71,6 +74,7 @@ class GameState:
                 ("starting_player", state._turn.active_player_index),
             ),
         )
+        state.establish_duel_opening_player(state.turn_state.active_player_index)
         return state
 
     @property
@@ -92,6 +96,50 @@ class GameState:
     def events(self) -> tuple[GameEvent, ...]:
         """:return: Copie immuable du journal d'événements."""
         return tuple(self._events)
+
+    @property
+    def duel_first_player_index(self) -> int:
+        """:return: Joueur qui a pris le premier tour du duel (règle de la pioche initiale)."""
+        return self._duel_first_player_index
+
+    @property
+    def priority_player_index(self) -> int:
+        """:return: Joueur qui détient la priorité (fenêtre de jeu)."""
+        return self._priority_player_index
+
+    @property
+    def consecutive_empty_stack_passes(self) -> int:
+        """:return: Passes consécutives à pile vide dans l'étape courante."""
+        return self._consecutive_empty_stack_passes
+
+    def establish_duel_opening_player(self, player_index: int) -> None:
+        """Mémorise le joueur qui commence le duel (saut de pioche du premier tour).
+
+        À appeler après positionnement final du premier tour (ex. setup usine).
+
+        :param player_index: ``0`` ou ``1``.
+        :raises InvalidGameStateError: si l'index est hors duel.
+        """
+        if player_index not in (0, 1):
+            msg = "Index joueur invalide pour le duel à deux."
+            raise InvalidGameStateError(msg, field_name="player_index")
+        self._duel_first_player_index = player_index
+
+    def turn_engine_set_priority_player(self, player_index: int) -> None:
+        """Assigne la priorité (API réservée au moteur de boucle de tour)."""
+        if player_index not in (0, 1):
+            msg = "Index joueur invalide pour la priorité."
+            raise InvalidGameStateError(msg, field_name="player_index")
+        self._priority_player_index = player_index
+
+    def turn_engine_reset_empty_stack_passes(self) -> None:
+        """Remet à zéro le compteur de passes à pile vide (moteur de tour)."""
+        self._consecutive_empty_stack_passes = 0
+
+    def turn_engine_increment_empty_stack_passes(self) -> int:
+        """Incrémente les passes à pile vide ; retourne la nouvelle valeur."""
+        self._consecutive_empty_stack_passes += 1
+        return self._consecutive_empty_stack_passes
 
     def record_engine_event(
         self,
