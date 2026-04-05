@@ -68,6 +68,37 @@ assert new_id != card_id
 
 Les déplacements peuvent soit **conserver** l’identifiant (`relocate_preserving_identity`), soit créer une **nouvelle instance logique** avec un nouvel identifiant (`migrate_in_game_card_as_new_instance`).
 
+## Setup de partie (deux joueurs)
+
+Le sous-paquet `baobab_mtg_rules_engine.setup` construit une `Game` à partir de decks décrits par des clés catalogue, avec mélange et mulligan **déterministes** lorsqu'une graine est fournie. Les décisions de mulligan sont injectées via `MulliganChoicePort` (le moteur n'embarque pas d'heuristique joueur).
+
+```python
+from baobab_mtg_rules_engine.catalog import InMemoryCardCatalogAdapter
+from baobab_mtg_rules_engine.setup import (
+    CallbackMulliganChoice,
+    DeckDefinition,
+    GameFactory,
+    GameSetupRequest,
+)
+
+keys = frozenset(f"c{i}" for i in range(15)) | frozenset(f"d{i}" for i in range(15))
+catalog = InMemoryCardCatalogAdapter(keys)
+factory = GameFactory(catalog)
+entries = tuple((f"c{i}", 4) for i in range(15))
+deck0 = DeckDefinition("Alice", entries)
+deck1 = DeckDefinition("Bob", tuple((f"d{i}", 4) for i in range(15)))
+request = GameSetupRequest(
+    game_id="demo",
+    player_names=("Alice", "Bob"),
+    decks=(deck0, deck1),
+    rng_seed=123,
+    starting_player=0,
+)
+game = factory.create_game(request, CallbackMulliganChoice(lambda _p, _d, _h: False))
+```
+
+Pour brancher le catalogue distribué Baobab, utiliser `BaobabMtgCatalogAdapter` si le paquet `baobab-mtg-catalog` est installé et expose l'API attendue ; sinon une `UnsupportedRuleException` est levée.
+
 ## Vérification qualité (pipeline local)
 
 Après `pip install -e ".[dev]"`, exécuter dans l’ordre :

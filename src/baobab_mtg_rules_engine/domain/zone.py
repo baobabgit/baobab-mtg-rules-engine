@@ -1,5 +1,7 @@
 """Zone ordonnée d'objets de jeu."""
 
+from collections import Counter
+
 from baobab_mtg_rules_engine.domain.game_object_id import GameObjectId
 from baobab_mtg_rules_engine.domain.zone_type import ZoneType
 
@@ -51,3 +53,16 @@ class Zone:
         :raises ValueError: si l'objet est absent.
         """
         self._order.remove(object_id)
+
+    def replace_ordered_contents(self, new_order: tuple[GameObjectId, ...]) -> None:
+        """Remplace l'ordre courant en conservant exactement le même multi-ensemble.
+
+        Utilisé pour les mélanges déterministes de bibliothèque.
+
+        :param new_order: Nouvelle permutation des identifiants déjà présents.
+        :raises ValueError: si le multi-ensemble ne correspond pas à la zone actuelle.
+        """
+        if Counter(self._order) != Counter(new_order):
+            msg = "replace_ordered_contents exige le même ensemble de cartes."
+            raise ValueError(msg)
+        self._order[:] = list(new_order)

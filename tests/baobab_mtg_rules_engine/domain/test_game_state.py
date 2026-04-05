@@ -1,5 +1,6 @@
 """Tests pour :class:`GameState`."""
 
+import random
 from typing import Any, cast
 from unittest.mock import Mock
 
@@ -18,6 +19,7 @@ from baobab_mtg_rules_engine.domain.step import Step
 from baobab_mtg_rules_engine.domain.turn_state import TurnState
 from baobab_mtg_rules_engine.domain.zone_location import ZoneLocation
 from baobab_mtg_rules_engine.domain.zone_type import ZoneType
+from baobab_mtg_rules_engine.exceptions.insufficient_library_error import InsufficientLibraryError
 from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
 
 
@@ -164,7 +166,7 @@ class TestGameState:
         oid = state.issue_object_id()
         spell = SpellOnStack(oid, CardReference("orphan"))
         with pytest.raises(InvalidGameStateError, match="sans index"):
-            state.register_object_at(spell, broken_location)  # type: ignore[arg-type]
+            state.register_object_at(spell, cast(Any, broken_location))
 
     def test_zone_for_location_rejects_hand_without_player(self) -> None:
         """La résolution de zone refuse une main sans index joueur (défense en profondeur)."""
@@ -173,4 +175,74 @@ class TestGameState:
         loc.zone_type = ZoneType.HAND
         loc.player_index = None
         with pytest.raises(InvalidGameStateError, match="sans index"):
-            state._zone_for_location(loc)  # type: ignore[arg-type]  # pylint: disable=protected-access
+            # pylint: disable-next=protected-access
+            state._zone_for_location(cast(Any, loc))
+
+
+class TestGameStateLibraryDrawAndShuffle:
+    """Pioche, mélange et événements moteur sans défaite implicite."""
+
+    def _fill_library(self, state: GameState, player_index: int, count: int) -> None:
+        lib = ZoneLocation(player_index, ZoneType.LIBRARY)
+        for i in range(count):
+            oid = state.issue_object_id()
+            card = InGameCard(oid, CardReference(f"c{i}"))
+            state.register_object_at(card, lib)
+
+    def test_draw_moves_from_top_of_library(self) -> None:
+        """La pioche retire depuis l'indice ``0`` de la bibliothèque."""
+        state = GameState.new_two_player()
+        self._fill_library(state, 0, 3)
+        drawn = state.draw_cards_from_library_to_hand(0, 2)
+        assert len(drawn) == 2
+        hand = state.players[0].zone(ZoneType.HAND).object_ids()
+        library = state.players[0].zone(ZoneType.LIBRARY).object_ids()
+        assert len(hand) == 2
+        assert len(library) == 1
+
+    def test_insufficient_library_raises_without_partial_draw(self) -> None:
+        """Pioche impossible : erreur explicite, bibliothèque et main inchangées."""
+        state = GameState.new_two_player()
+        self._fill_library(state, 0, 3)
+        before_lib = state.players[0].zone(ZoneType.LIBRARY).object_ids()
+        with pytest.raises(InsufficientLibraryError, match="insuffisante"):
+            state.draw_cards_from_library_to_hand(0, 7)
+        assert state.players[0].zone(ZoneType.LIBRARY).object_ids() == before_lib
+        assert not state.players[0].zone(ZoneType.HAND).object_ids()
+
+    def test_insufficient_library_does_not_emit_loss_event(self) -> None:
+        """Aucun type d'événement de défaite n'est ajouté sur pioche refusée."""
+        state = GameState.new_two_player()
+        self._fill_library(state, 0, 1)
+        seq_before = len(state.events)
+        with pytest.raises(InsufficientLibraryError):
+            state.draw_cards_from_library_to_hand(0, 2)
+        new_events = state.events[seq_before:]
+        assert not new_events
+
+    def test_shuffle_library_is_deterministic_with_seed(self) -> None:
+        """Un ``random.Random`` figé produit le même ordre de bibliothèque."""
+        state = GameState.new_two_player()
+        self._fill_library(state, 1, 8)
+        state.shuffle_player_library(1, random.Random(42))
+        order_a = state.players[1].zone(ZoneType.LIBRARY).object_ids()
+        state2 = GameState.new_two_player()
+        self._fill_library(state2, 1, 8)
+        state2.shuffle_player_library(1, random.Random(42))
+        order_b = state2.players[1].zone(ZoneType.LIBRARY).object_ids()
+        assert order_a == order_b
+
+    def test_record_engine_event_appends_to_log(self) -> None:
+        """Les événements de setup peuvent être journalisés explicitement."""
+        state = GameState.new_two_player()
+        before = len(state.events)
+        state.record_engine_event(EventType.SETUP_DECKS_VALIDATED, (("k", "v"),))
+        assert len(state.events) == before + 1
+        assert state.events[-1].event_type is EventType.SETUP_DECKS_VALIDATED
+
+    def test_draw_negative_count_rejected(self) -> None:
+        """Un nombre négatif de cartes est refusé avant accès à la bibliothèque."""
+        state = GameState.new_two_player()
+        self._fill_library(state, 0, 5)
+        with pytest.raises(InvalidGameStateError, match="négatif"):
+            state.draw_cards_from_library_to_hand(0, -1)
