@@ -1,5 +1,6 @@
 """Moteur de boucle de tour et priorité (duel)."""
 
+from baobab_mtg_rules_engine.engine.legal_action_service import LegalActionService
 from baobab_mtg_rules_engine.engine.null_priority_action_legality_port import (
     NullPriorityActionLegalityPort,
 )
@@ -9,6 +10,7 @@ from baobab_mtg_rules_engine.engine.step_transition_service import StepTransitio
 from baobab_mtg_rules_engine.engine.turn_manager import TurnManager
 
 __all__ = [
+    "LegalActionService",
     "NullPriorityActionLegalityPort",
     "PriorityActionLegalityPort",
     "PriorityManager",

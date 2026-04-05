@@ -113,6 +113,34 @@ tm.pass_priority()      # à répéter côté interface / script
 
 Le mana résiduel modélisé sur `PlayerState.floating_mana` est vidé lors du nettoyage, avec événement `FLOATING_MANA_CLEARED` dans le journal.
 
+## Actions légales (périmètre supporté)
+
+Le paquet `baobab_mtg_rules_engine.actions` décrit les **actions atomiques** reconnues (passe, terrain, sort simple, capacité activée simple, déclaration d’attaquants / bloqueurs). Le service `LegalActionService` calcule une **liste triée et déterministe** pour le joueur qui **détient la priorité**, à partir d’un `CardGameplayPort` (par ex. `InMemoryCardCatalogAdapter`).
+
+- **Timing rituel** (terrain, rituel) : principale pré- ou post-combat du joueur **actif**, **pile vide**.
+- **Instant** : autorisé avec la priorité même si la pile n’est pas vide (modèle simplifié).
+- **Application** : `apply_action` recalcule l’ensemble légal puis refuse toute action absente (`IllegalGameActionError`) avant mutation ; la passe délègue à `TurnManager.pass_priority()`.
+
+```python
+from baobab_mtg_rules_engine.actions import CastSpellAction, PassPriorityAction
+from baobab_mtg_rules_engine.catalog import InMemoryCardCatalogAdapter
+from baobab_mtg_rules_engine.engine import LegalActionService, TurnManager
+
+rules = InMemoryCardCatalogAdapter(
+    frozenset({"forest", "bolt"}),
+    land_keys=frozenset({"forest"}),
+    instant_spell_keys=frozenset({"bolt"}),
+    spell_mana_cost_by_key={"bolt": 1},
+)
+svc = LegalActionService()
+# state : GameState avec priorité et mains renseignées ; tm : TurnManager(state)
+legal = svc.compute_legal_actions(state, rules, acting_player_index=state.priority_player_index)
+if PassPriorityAction() in legal:
+    svc.apply_action(state, rules, state.priority_player_index, PassPriorityAction(), tm)
+```
+
+Les comportements non modélisés doivent être signalés par les adaptateurs ou par `IllegalGameActionError`, sans mutation implicite.
+
 ## Vérification qualité (pipeline local)
 
 Après `pip install -e ".[dev]"`, exécuter dans l’ordre :

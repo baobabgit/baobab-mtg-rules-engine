@@ -2,6 +2,29 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-05 — feature `04_legal_actions_engine`
+
+### Modifications
+
+- Paquet `actions` : `SupportedActionKind`, `GameAction` et actions concrètes (passe, terrain, sort, capacité simple, attaquants / bloqueurs)
+- `CardGameplayPort`, `InMemoryCardCatalogAdapter` enrichi (terrains, créatures, rituels / instants, coûts, capacités activées) ; `BaobabMtgCatalogAdapter` refuse le gameplay distant avec tests dédiés
+- `LegalActionService` : `compute_legal_actions`, `apply_action` (re-validation dans l’ensemble légal courant avant toute mutation)
+- `IllegalGameActionError` ; `TurnManager` : reset compteur de terrains au roulement de tour, vidage des déclarations de combat à l’entrée en `BEGIN_COMBAT`
+- `GameState` : compteur de terrains / combat et `apply_*` alignés avec la feature (déjà présents sur la branche)
+- Tests miroir `tests/.../actions/`, `test_legal_action_service.py`, extension `test_turn_manager` / catalogue ; README, CHANGELOG, version **0.5.0** ; couverture **~95 %**
+
+### Buts
+
+- Offrir une liste d’actions **déterministe** et **inspectable** pour l’agent ou l’UI, sans logique de choix ni exécution de règles non supportées
+
+### Impact
+
+- Base pour des résolveurs de pile et un combat plus fin sans coupler le moteur à une stratégie joueur
+
+### Note PR / merge
+
+- Branche `feature/04-legal-actions-engine` → PR vers `main` ; merge après CI locale au vert
+
 ## 2026-04-05 — feature `03_turn_loop_priority`
 
 ### Modifications

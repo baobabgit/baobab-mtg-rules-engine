@@ -52,3 +52,34 @@ class TestBaobabMtgCatalogAdapter:
         assert adapter.is_supported_catalog_key("k1") is True
         assert adapter.is_supported_catalog_key("x") is False
         assert adapter.allows_unlimited_copies("k1") is False
+
+    def test_card_gameplay_port_methods_raise_unsupported(self) -> None:
+        """Les métadonnées ``CardGameplayPort`` ne sont pas encore branchées sur Baobab."""
+
+        def is_supported_catalog_key(_key: str) -> bool:
+            return True
+
+        def allows_unlimited_copies(_key: str) -> bool:
+            return False
+
+        fake = SimpleNamespace(
+            is_supported_catalog_key=is_supported_catalog_key,
+            allows_unlimited_copies=allows_unlimited_copies,
+        )
+        with patch(
+            "baobab_mtg_rules_engine.catalog.baobab_mtg_catalog_adapter.importlib.import_module",
+            return_value=fake,
+        ):
+            adapter = BaobabMtgCatalogAdapter()
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.is_land_catalog_key("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.is_creature_catalog_key("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.is_sorcery_speed_spell_catalog_key("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.is_instant_speed_spell_catalog_key("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.spell_generic_mana_cost("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.simple_activated_ability_costs("x")

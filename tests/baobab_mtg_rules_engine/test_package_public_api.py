@@ -23,6 +23,7 @@ class TestPackagePublicApi:
         assert hasattr(engine_pkg, "InvalidGameStateError")
         assert hasattr(engine_pkg, "UnsupportedRuleException")
         assert hasattr(engine_pkg, "ValidationException")
+        assert hasattr(engine_pkg, "IllegalGameActionError")
 
     def test_all_matches_exported_names(self) -> None:
         """``__all__`` reste cohérent avec les attributs réellement exportés."""
@@ -48,6 +49,7 @@ class TestPackagePublicApi:
         "name",
         [
             "BaobabMtgRulesEngineException",
+            "IllegalGameActionError",
             "InvalidGameStateError",
             "UnsupportedRuleException",
             "ValidationException",

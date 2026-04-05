@@ -6,6 +6,7 @@ from baobab_mtg_rules_engine.domain.card_reference import CardReference
 from baobab_mtg_rules_engine.domain.event_type import EventType
 from baobab_mtg_rules_engine.domain.game_state import GameState
 from baobab_mtg_rules_engine.domain.in_game_card import InGameCard
+from baobab_mtg_rules_engine.domain.permanent import Permanent
 from baobab_mtg_rules_engine.domain.step import Step
 from baobab_mtg_rules_engine.domain.turn_state import TurnState
 from baobab_mtg_rules_engine.domain.zone_location import ZoneLocation
@@ -137,3 +138,34 @@ class TestTurnManager:
         assert all(
             e.event_type is not EventType.PRIORITY_PASSED for e in state.events[count_before:]
         )
+
+    def test_cleanup_roll_resets_lands_played_counter(self) -> None:
+        """Le passage au joueur suivant remet le compteur de terrains du tour à zéro."""
+        state = GameState.new_two_player()
+        lib = ZoneLocation(0, ZoneType.HAND)
+        first = state.issue_object_id()
+        second = state.issue_object_id()
+        state.register_object_at(InGameCard(first, CardReference("f1")), lib)
+        state.register_object_at(InGameCard(second, CardReference("f2")), lib)
+        state.apply_play_land(0, first)
+        state.apply_play_land(0, second)
+        assert state.lands_played_this_turn == 2
+        state.replace_turn_state(TurnState(0, 1, Step.CLEANUP))
+        mgr = TurnManager(state)
+        mgr.open_current_step()
+        assert state.lands_played_this_turn == 0
+
+    def test_begin_combat_opens_with_empty_declarations(self) -> None:
+        """L'entrée en début de combat vide les listes de déclaration du tour précédent."""
+        state = GameState.new_two_player()
+        attacker = state.issue_object_id()
+        state.register_object_at(
+            Permanent(attacker, CardReference("c1")),
+            ZoneLocation(0, ZoneType.BATTLEFIELD),
+        )
+        state.apply_declare_attacker(0, attacker)
+        assert len(state.declared_attackers) == 1
+        state.replace_turn_state(TurnState(0, 1, Step.BEGIN_COMBAT))
+        mgr = TurnManager(state)
+        mgr.open_current_step()
+        assert len(state.declared_attackers) == 0

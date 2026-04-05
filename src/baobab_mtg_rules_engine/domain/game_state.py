@@ -9,7 +9,9 @@ from baobab_mtg_rules_engine.domain.game_event import GameEvent
 from baobab_mtg_rules_engine.domain.game_object import GameObject
 from baobab_mtg_rules_engine.domain.game_object_id import GameObjectId
 from baobab_mtg_rules_engine.domain.in_game_card import InGameCard
+from baobab_mtg_rules_engine.domain.permanent import Permanent
 from baobab_mtg_rules_engine.domain.player_state import PLAYER_OWNED_ZONE_TYPES, PlayerState
+from baobab_mtg_rules_engine.domain.spell_on_stack import SpellOnStack
 from baobab_mtg_rules_engine.domain.turn_state import TurnState
 from baobab_mtg_rules_engine.domain.zone import Zone
 from baobab_mtg_rules_engine.domain.zone_location import ZoneLocation
@@ -18,7 +20,7 @@ from baobab_mtg_rules_engine.exceptions.insufficient_library_error import Insuff
 from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
 
 
-class GameState:  # pylint: disable=too-many-public-methods
+class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """État mutable et inspectable d'une partie à deux joueurs.
 
     Les identifiants d'objets sont émis de façon déterministe (compteur monotone).
@@ -46,6 +48,9 @@ class GameState:  # pylint: disable=too-many-public-methods
         self._duel_first_player_index: int = 0
         self._priority_player_index: int = self._turn.active_player_index
         self._consecutive_empty_stack_passes: int = 0
+        self._lands_played_this_turn: int = 0
+        self._declared_attackers: list[GameObjectId] = []
+        self._declared_blocks: list[tuple[GameObjectId, GameObjectId]] = []
 
     @classmethod
     def new_two_player(
@@ -111,6 +116,188 @@ class GameState:  # pylint: disable=too-many-public-methods
     def consecutive_empty_stack_passes(self) -> int:
         """:return: Passes consécutives à pile vide dans l'étape courante."""
         return self._consecutive_empty_stack_passes
+
+    @property
+    def lands_played_this_turn(self) -> int:
+        """:return: Terrains joués par le joueur actif durant ce tour."""
+        return self._lands_played_this_turn
+
+    @property
+    def declared_attackers(self) -> tuple[GameObjectId, ...]:
+        """:return: Attaquants déclarés pour le combat courant (modèle simplifié)."""
+        return tuple(self._declared_attackers)
+
+    @property
+    def declared_blocks(self) -> tuple[tuple[GameObjectId, GameObjectId], ...]:
+        """:return: Paires (bloqueur, attaquant) déclarées."""
+        return tuple(self._declared_blocks)
+
+    def turn_engine_reset_turn_resource_counters(self) -> None:
+        """Remet les compteurs de tour (terrains) ; appelé en début de tour adverse."""
+        self._lands_played_this_turn = 0
+
+    def turn_engine_begin_combat_declarations(self) -> None:
+        """Vide les déclarations de combat pour une nouvelle manœuvre de combat."""
+        self._declared_attackers.clear()
+        self._declared_blocks.clear()
+
+    def turn_engine_spend_floating_mana(self, player_index: int, amount: int) -> None:
+        """Délègue la dépense de mana flottant au joueur indiqué."""
+        self._players[player_index].spend_floating_mana(amount)
+
+    def apply_play_land(self, player_index: int, land_object_id: GameObjectId) -> None:
+        """Joue un terrain depuis la main vers le champ (identité conservée, modèle simplifié).
+
+        L'appelant doit avoir validé la légalité au préalable.
+
+        :raises InvalidGameStateError: si la carte n'est pas une :class:`InGameCard` en main.
+        """
+        loc = self.find_location(land_object_id)
+        if loc.zone_type is not ZoneType.HAND or loc.player_index != player_index:
+            msg = "Le terrain doit être en main du joueur qui le joue."
+            raise InvalidGameStateError(msg, field_name="land_object_id")
+        obj = self.get_object(land_object_id)
+        if not isinstance(obj, InGameCard):
+            msg = "Seule une carte en main peut être jouée comme terrain."
+            raise InvalidGameStateError(msg, field_name="land_object_id")
+        bf = ZoneLocation(player_index, ZoneType.BATTLEFIELD)
+        self.relocate_preserving_identity(land_object_id, bf)
+        self._lands_played_this_turn += 1
+        self.record_engine_event(
+            EventType.LAND_PLAYED,
+            (
+                ("player_index", player_index),
+                ("object_id", land_object_id.value),
+                ("catalog_key", obj.card_reference.catalog_key),
+            ),
+        )
+
+    def apply_cast_spell_hand_to_stack(
+        self,
+        player_index: int,
+        spell_object_id: GameObjectId,
+        *,
+        generic_mana_cost: int,
+    ) -> GameObjectId:
+        """Lance un sort : main → pile, nouveau :class:`SpellOnStack`, paiement du coût.
+
+        :return: Nouvel identifiant sur la pile.
+        :raises InvalidGameStateError: si la carte n'est pas en main ou coût invalide.
+        """
+        loc = self.find_location(spell_object_id)
+        if loc.zone_type is not ZoneType.HAND or loc.player_index != player_index:
+            msg = "Le sort doit être en main du lanceur."
+            raise InvalidGameStateError(msg, field_name="spell_object_id")
+        if generic_mana_cost < 0:
+            msg = "Coût de sort invalide."
+            raise InvalidGameStateError(msg, field_name="generic_mana_cost")
+        self.turn_engine_spend_floating_mana(player_index, generic_mana_cost)
+        stack = ZoneLocation(None, ZoneType.STACK)
+        new_id = self.migrate_in_game_card_as_new_instance(
+            spell_object_id,
+            target=stack,
+            new_kind=SpellOnStack,
+        )
+        card = self.get_object(new_id)
+        ref = card.card_reference if isinstance(card, SpellOnStack) else None
+        ck = ref.catalog_key if ref is not None else ""
+        self.record_engine_event(
+            EventType.SPELL_CAST,
+            (
+                ("player_index", player_index),
+                ("new_object_id", new_id.value),
+                ("mana_paid", generic_mana_cost),
+                ("catalog_key", ck),
+            ),
+        )
+        return new_id
+
+    def apply_activate_simple_ability(
+        self,
+        player_index: int,
+        permanent_object_id: GameObjectId,
+        *,
+        generic_mana_cost: int,
+    ) -> None:
+        """Paie un coût pour une capacité simple sur un permanent contrôlé."""
+        loc = self.find_location(permanent_object_id)
+        if loc.zone_type is not ZoneType.BATTLEFIELD or loc.player_index != player_index:
+            msg = "Le permanent doit être sur votre champ de bataille."
+            raise InvalidGameStateError(msg, field_name="permanent_object_id")
+        obj = self.get_object(permanent_object_id)
+        if not isinstance(obj, Permanent):
+            msg = "La capacité simple cible un permanent."
+            raise InvalidGameStateError(msg, field_name="permanent_object_id")
+        if generic_mana_cost < 0:
+            msg = "Coût de capacité invalide."
+            raise InvalidGameStateError(msg, field_name="generic_mana_cost")
+        self.turn_engine_spend_floating_mana(player_index, generic_mana_cost)
+        self.record_engine_event(
+            EventType.SIMPLE_ABILITY_ACTIVATED,
+            (
+                ("player_index", player_index),
+                ("permanent_id", permanent_object_id.value),
+                ("mana_paid", generic_mana_cost),
+                ("catalog_key", obj.card_reference.catalog_key),
+            ),
+        )
+
+    def apply_declare_attacker(
+        self,
+        active_player_index: int,
+        creature_object_id: GameObjectId,
+    ) -> None:
+        """Enregistre un attaquant (étape déclaration simplifiée)."""
+        loc = self.find_location(creature_object_id)
+        if loc.zone_type is not ZoneType.BATTLEFIELD or loc.player_index != active_player_index:
+            msg = "L'attaquant doit être une créature sur le champ du joueur actif."
+            raise InvalidGameStateError(msg, field_name="creature_object_id")
+        obj = self.get_object(creature_object_id)
+        if not isinstance(obj, Permanent):
+            msg = "Seul un permanent peut attaquer."
+            raise InvalidGameStateError(msg, field_name="creature_object_id")
+        if creature_object_id in self._declared_attackers:
+            msg = "Cette créature est déjà déclarée attaquante."
+            raise InvalidGameStateError(msg, field_name="creature_object_id")
+        self._declared_attackers.append(creature_object_id)
+        self.record_engine_event(
+            EventType.ATTACKER_DECLARED,
+            (("object_id", creature_object_id.value),),
+        )
+
+    def apply_declare_blocker(
+        self,
+        defending_player_index: int,
+        blocker_object_id: GameObjectId,
+        attacker_object_id: GameObjectId,
+    ) -> None:
+        """Enregistre un bloqueur sur un attaquant déclaré."""
+        if attacker_object_id not in self._declared_attackers:
+            msg = "L'attaquant doit être déclaré."
+            raise InvalidGameStateError(msg, field_name="attacker_object_id")
+        bloc_loc = self.find_location(blocker_object_id)
+        if (
+            bloc_loc.zone_type is not ZoneType.BATTLEFIELD
+            or bloc_loc.player_index != defending_player_index
+        ):
+            msg = "Le bloqueur doit être sur le champ du défenseur."
+            raise InvalidGameStateError(msg, field_name="blocker_object_id")
+        bobj = self.get_object(blocker_object_id)
+        if not isinstance(bobj, Permanent):
+            msg = "Seul un permanent peut bloquer."
+            raise InvalidGameStateError(msg, field_name="blocker_object_id")
+        for b, _ in self._declared_blocks:
+            if b == blocker_object_id:
+                msg = "Ce bloqueur est déjà assigné."
+                raise InvalidGameStateError(msg, field_name="blocker_object_id")
+        self._declared_blocks.append((blocker_object_id, attacker_object_id))
+        self.record_engine_event(
+            EventType.BLOCKER_DECLARED,
+            (
+                ("blocker_id", blocker_object_id.value),
+                ("attacker_id", attacker_object_id.value),
+            ),
+        )
 
     def establish_duel_opening_player(self, player_index: int) -> None:
         """Mémorise le joueur qui commence le duel (saut de pioche du premier tour).
