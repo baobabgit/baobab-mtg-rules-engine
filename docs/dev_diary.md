@@ -2,6 +2,29 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-06 — feature `06_combat_damage_and_sba`
+
+### Modifications
+
+- `combat/` : `CombatService`, `AttackerDeclarationService`, `BlockerDeclarationService` ; `engine/state_based_action_service.py`
+- `Permanent` : blessures marquées ; `GameState` : issue de partie, défaite / match nul, garde sur déclarations si partie terminée, un bloqueur par attaquant en domaine
+- `CardGameplayPort` / `InMemoryCardCatalogAdapter` : `creature_power` / `creature_toughness` ; `BaobabMtgCatalogAdapter` : refus explicite
+- `LegalActionService` : P/T > 0 pour proposer attaquant / bloqueur, pas de second bloqueur sur le même attaquant ; application via services de déclaration
+- `TurnManager` : `rules` optionnel (combat + ABS à `COMBAT_DAMAGE`), pioche impossible → défaite, nettoyage des blessures marquées
+- Événements combat / ABS / victoire ; tests miroir `tests/.../combat/`, `test_state_based_action_service.py` ; README, CHANGELOG, version **0.7.0** ; couverture **~91 %**
+
+### Buts
+
+- Combat déterministe, destruction létale, fin de partie par PV ou bibliothèque vide
+
+### Impact
+
+- Les consommateurs doivent fournir P/T catalogue pour les créatures en combat ; le moteur refuse le multi-blocage simple
+
+### Note PR / merge
+
+- Branche `feature/06-combat-damage-and-sba` → PR vers `main` après contrôles au vert
+
 ## 2026-04-06 — feature `05_casting_stack_and_resolution`
 
 ### Modifications

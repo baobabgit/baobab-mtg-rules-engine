@@ -49,3 +49,11 @@ class CardGameplayPort(Protocol):
     def simple_activated_ability_costs(self, catalog_key: str) -> tuple[int, ...]:
         """:return: Coûts mana génériques pour capacités activées simples ; vide si aucune."""
         ...
+
+    def creature_power(self, catalog_key: str) -> int:
+        """:return: Force de combat pour une créature catalogue ; ``0`` si inconnu."""
+        ...
+
+    def creature_toughness(self, catalog_key: str) -> int:
+        """:return: Endurance pour une créature catalogue ; ``0`` si inconnu."""
+        ...

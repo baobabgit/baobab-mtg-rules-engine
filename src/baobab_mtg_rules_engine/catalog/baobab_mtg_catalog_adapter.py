@@ -95,3 +95,13 @@ class BaobabMtgCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         _ = catalog_key
         msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
         raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def creature_power(self, catalog_key: str) -> int:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def creature_toughness(self, catalog_key: str) -> int:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")

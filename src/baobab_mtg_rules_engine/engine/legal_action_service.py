@@ -13,6 +13,8 @@ from baobab_mtg_rules_engine.actions.pass_priority_action import PassPriorityAct
 from baobab_mtg_rules_engine.actions.play_land_action import PlayLandAction
 from baobab_mtg_rules_engine.casting.spell_cast_service import SpellCastService
 from baobab_mtg_rules_engine.catalog.card_gameplay_port import CardGameplayPort
+from baobab_mtg_rules_engine.combat.attacker_declaration_service import AttackerDeclarationService
+from baobab_mtg_rules_engine.combat.blocker_declaration_service import BlockerDeclarationService
 from baobab_mtg_rules_engine.domain.game_object_id import GameObjectId
 from baobab_mtg_rules_engine.domain.game_state import GameState
 from baobab_mtg_rules_engine.domain.in_game_card import InGameCard
@@ -30,8 +32,19 @@ _PASS_SINGLETON = PassPriorityAction()
 class LegalActionService:
     """Liste les actions supportées à un instant donné et les applique sans court-circuit."""
 
-    def __init__(self, spell_cast: SpellCastService | None = None) -> None:
+    def __init__(
+        self,
+        spell_cast: SpellCastService | None = None,
+        attacker_declaration: AttackerDeclarationService | None = None,
+        blocker_declaration: BlockerDeclarationService | None = None,
+    ) -> None:
         self._spell_cast: SpellCastService = spell_cast or SpellCastService()
+        self._attacker_declaration: AttackerDeclarationService = (
+            attacker_declaration or AttackerDeclarationService()
+        )
+        self._blocker_declaration: BlockerDeclarationService = (
+            blocker_declaration or BlockerDeclarationService()
+        )
 
     def compute_legal_actions(
         self,
@@ -89,16 +102,20 @@ class LegalActionService:
                 generic_mana_cost=action.generic_mana_cost,
             )
         elif isinstance(action, DeclareAttackerAction):
-            state.apply_declare_attacker(
-                state.turn_state.active_player_index,
-                action.creature_object_id,
+            self._attacker_declaration.validate_and_apply(
+                state,
+                rules,
+                active_player_index=state.turn_state.active_player_index,
+                creature_object_id=action.creature_object_id,
             )
         elif isinstance(action, DeclareBlockerAction):
             defending = 1 - state.turn_state.active_player_index
-            state.apply_declare_blocker(
-                defending,
-                action.blocker_object_id,
-                action.attacker_object_id,
+            self._blocker_declaration.validate_and_apply(
+                state,
+                rules,
+                defending_player_index=defending,
+                blocker_object_id=action.blocker_object_id,
+                attacker_object_id=action.attacker_object_id,
             )
         else:
             msg = f"Type d'action non géré : {type(action)!r}."
@@ -244,8 +261,10 @@ class LegalActionService:
             obj = state.get_object(oid)
             if not isinstance(obj, Permanent):
                 continue
-            if rules.is_creature_catalog_key(obj.card_reference.catalog_key):
-                out.append(DeclareAttackerAction(oid))
+            key = obj.card_reference.catalog_key
+            if rules.is_creature_catalog_key(key):
+                if rules.creature_power(key) >= 1 and rules.creature_toughness(key) >= 1:
+                    out.append(DeclareAttackerAction(oid))
         out.sort(key=lambda a: a.sort_key())
         return out
 
@@ -264,15 +283,20 @@ class LegalActionService:
             return []
         defender = acting
         used_blockers = {b for b, _ in state.declared_blocks}
+        blocked_attackers = {a for _, a in state.declared_blocks}
         out: list[DeclareBlockerAction] = []
         for attacker_id in state.declared_attackers:
+            if attacker_id in blocked_attackers:
+                continue
             for oid in state.players[defender].zone(ZoneType.BATTLEFIELD).object_ids():
                 if oid in used_blockers:
                     continue
                 obj = state.get_object(oid)
                 if not isinstance(obj, Permanent):
                     continue
-                if rules.is_creature_catalog_key(obj.card_reference.catalog_key):
-                    out.append(DeclareBlockerAction(oid, attacker_id))
+                key = obj.card_reference.catalog_key
+                if rules.is_creature_catalog_key(key):
+                    if rules.creature_power(key) >= 1 and rules.creature_toughness(key) >= 1:
+                        out.append(DeclareBlockerAction(oid, attacker_id))
         out.sort(key=lambda a: a.sort_key())
         return out

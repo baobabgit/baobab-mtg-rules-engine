@@ -6,6 +6,7 @@ from baobab_mtg_rules_engine.engine.null_priority_action_legality_port import (
 )
 from baobab_mtg_rules_engine.engine.priority_action_legality_port import PriorityActionLegalityPort
 from baobab_mtg_rules_engine.engine.priority_manager import PriorityManager
+from baobab_mtg_rules_engine.engine.state_based_action_service import StateBasedActionService
 from baobab_mtg_rules_engine.engine.step_transition_service import StepTransitionService
 from baobab_mtg_rules_engine.engine.turn_manager import TurnManager
 
@@ -14,6 +15,7 @@ __all__ = [
     "NullPriorityActionLegalityPort",
     "PriorityActionLegalityPort",
     "PriorityManager",
+    "StateBasedActionService",
     "StepTransitionService",
     "TurnManager",
 ]

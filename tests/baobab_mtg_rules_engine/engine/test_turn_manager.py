@@ -2,6 +2,9 @@
 
 import pytest
 
+from baobab_mtg_rules_engine.catalog.in_memory_card_catalog_adapter import (
+    InMemoryCardCatalogAdapter,
+)
 from baobab_mtg_rules_engine.domain.card_reference import CardReference
 from baobab_mtg_rules_engine.domain.event_type import EventType
 from baobab_mtg_rules_engine.domain.game_state import GameState
@@ -103,6 +106,49 @@ class TestTurnManager:
         mgr.open_current_step()
         assert state.players[0].floating_mana == 0
         assert EventType.FLOATING_MANA_CLEARED in [e.event_type for e in state.events]
+
+    def test_cleanup_clears_marked_damage_on_permanents(self) -> None:
+        """Les blessures marquées sont effacées en début d'étape de nettoyage."""
+        state = GameState.new_two_player()
+        oid = state.issue_object_id()
+        p = Permanent(oid, CardReference("x"), marked_damage=2)
+        state.register_object_at(p, ZoneLocation(0, ZoneType.BATTLEFIELD))
+        state.replace_turn_state(TurnState(0, 1, Step.CLEANUP))
+        TurnManager(state).open_current_step()
+        cleared = state.get_object(oid)
+        assert isinstance(cleared, Permanent)
+        assert cleared.marked_damage == 0
+        assert EventType.ALL_PERMANENT_DAMAGE_CLEARED in [e.event_type for e in state.events]
+
+    def test_draw_empty_library_defeats_active_player(self) -> None:
+        """Pioche impossible : défaite du joueur actif, adversaire vainqueur."""
+        state = GameState.new_two_player()
+        state.establish_duel_opening_player(0)
+        state.replace_turn_state(TurnState(0, 2, Step.DRAW))
+        mgr = TurnManager(state)
+        mgr.open_current_step()
+        assert state.winner_player_index == 1
+        assert EventType.PLAYER_DEFEATED in [e.event_type for e in state.events]
+
+    def test_combat_damage_step_with_rules_damages_defending_player(self) -> None:
+        """À COMBAT_DAMAGE, le port règles déclenche blessures puis ABS."""
+        state = GameState.new_two_player()
+        aid = state.issue_object_id()
+        state.register_object_at(
+            Permanent(aid, CardReference("bear")),
+            ZoneLocation(0, ZoneType.BATTLEFIELD),
+        )
+        state.replace_turn_state(TurnState(0, 2, Step.COMBAT_DAMAGE))
+        state.apply_declare_attacker(0, aid)
+        rules = InMemoryCardCatalogAdapter(
+            frozenset({"bear"}),
+            creature_keys=frozenset({"bear"}),
+            creature_power_toughness_by_key={"bear": (2, 2)},
+        )
+        life_before = state.players[1].life_total
+        mgr = TurnManager(state, rules=rules)
+        mgr.open_current_step()
+        assert state.players[1].life_total == life_before - 2
 
     def test_full_turn_emits_step_and_roll_events(self) -> None:
         """Un tour complet laisse une trace d'étapes et de passage au joueur suivant."""

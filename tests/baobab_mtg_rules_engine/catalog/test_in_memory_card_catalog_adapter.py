@@ -22,3 +22,14 @@ class TestInMemoryCardCatalogAdapter:
         )
         assert adapter.allows_unlimited_copies("land") is True
         assert adapter.allows_unlimited_copies("spell") is False
+
+    def test_creature_power_toughness(self) -> None:
+        """Force et endurance optionnelles par clé catalogue."""
+        adapter = InMemoryCardCatalogAdapter(
+            frozenset({"grizzly"}),
+            creature_keys=frozenset({"grizzly"}),
+            creature_power_toughness_by_key={"grizzly": (3, 3)},
+        )
+        assert adapter.creature_power("grizzly") == 3
+        assert adapter.creature_toughness("grizzly") == 3
+        assert adapter.creature_power("unknown") == 0

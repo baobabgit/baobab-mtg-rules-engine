@@ -5,6 +5,21 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format s’inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.7.0] - 2026-04-06
+
+### Added
+
+- Paquet `combat` : `CombatService` (blessures à `COMBAT_DAMAGE`, un bloqueur par attaquant max), `AttackerDeclarationService`, `BlockerDeclarationService`
+- `StateBasedActionService` : destruction des créatures avec blessures létales, défaite par PV, match nul si les deux joueurs sont à 0 ou moins
+- `Permanent.marked_damage` ; `CardGameplayPort.creature_power` / `creature_toughness` et `creature_power_toughness_by_key` sur `InMemoryCardCatalogAdapter`
+- `GameState` : fin de partie (`winner_player_index`, `is_draw_game`, `is_game_finished`), `record_player_defeat`, `record_draw_game`, vidage des blessures au nettoyage
+- `TurnManager` : paramètre optionnel `rules` pour résoudre combat + ABS à `COMBAT_DAMAGE` ; pioche impossible à l’étape de pioche → défaite (`reason=library`)
+- Événements `COMBAT_DAMAGE_ASSIGNED`, `CREATURE_DESTROYED`, `PLAYER_DEFEATED`, `GAME_VICTORY_ASSIGNED`, `GAME_DRAW`, `ALL_PERMANENT_DAMAGE_CLEARED`
+
+### Tests
+
+- `tests/.../combat/`, `engine/test_state_based_action_service.py`, extension `test_turn_manager` / `test_legal_action_service`
+
 ## [0.6.0] - 2026-04-06
 
 ### Added
