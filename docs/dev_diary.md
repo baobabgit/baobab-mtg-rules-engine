@@ -22,7 +22,7 @@ Les entrées les plus récentes en premier.
 
 ### Note PR / merge
 
-- Branche `feature/05-casting-stack-and-resolution` → PR vers `main` après contrôles qualité au vert
+- Branche `feature/05-casting-stack-and-resolution` → PR [#6](https://github.com/baobabgit/baobab-mtg-rules-engine/pull/6) squash-merge sur `main` après contrôles qualité au vert
 
 ## 2026-04-05 — feature `04_legal_actions_engine`
 
