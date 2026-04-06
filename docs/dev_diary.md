@@ -2,6 +2,28 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-05 — feature `08_scenarios_replay_and_observability`
+
+### Modifications
+
+- `scenarios/` : `ScenarioBuilder`, `ScenarioContext` (construction déterministe, alias stables pour replay)
+- `replay/` : `RecordedGameAction`, `GameReplayService` (replay, assertions déterminisme / trace)
+- `observability/` : `GameStateInspector` (trace tuple, formatage événements, résumé)
+- `ReplaySequenceError` ; tests miroir replay / scénarios / observabilité + fixtures de non-régression
+- README (section scénarios & replay), `docs/features/08_scenarios_replay_and_observability.md`, `examples/replay_minimal_example.py`, version **0.8.0** ; couverture **~92 %**
+
+### Buts
+
+- Tests de non-régression reproductibles, debug et inspection du journal sans persistance externe ni UI
+
+### Impact
+
+- Les alias doivent être cohérents avec le `ScenarioBuilder` pour que le replay résolve les bons `GameObjectId`
+
+### Note PR / merge
+
+- Branche `feature/08-scenarios-replay-and-observability` → PR vers `main` après CI locale au vert
+
 ## 2026-04-06 — feature `06_combat_damage_and_sba`
 
 ### Modifications
