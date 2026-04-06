@@ -14,6 +14,10 @@ Les entrées les plus récentes en premier.
 
 - Dépôt publiable et vérifiable automatiquement sans ambiguïté de licence ni d’URL
 
+### Note PR / merge
+
+- Branche `feature/release-readiness-go` → PR [#9](https://github.com/baobabgit/baobab-mtg-rules-engine/pull/9) squash-merge sur `main`
+
 ## 2026-04-05 — feature `08_scenarios_replay_and_observability`
 
 ### Modifications
