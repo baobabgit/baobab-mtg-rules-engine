@@ -2,9 +2,17 @@
 
 Bibliothèque Python pour un **moteur de règles Magic: The Gathering** orienté **déterminisme**, **inspectabilité** et **validation explicite** des actions. Le projet s’inscrit dans l’écosystème Baobab MTG.
 
+## Statut du projet
+
+- **Maturité** : version **alpha** (classificateur PyPI *Development Status :: 3 - Alpha*). Le paquet est utilisable pour intégration et tests, mais l’API et le périmètre fonctionnel peuvent encore évoluer.
+- **Supporté aujourd’hui (aperçu)** : duel à deux joueurs ; état de partie inspectable ; boucle de tour et priorité ; calcul d’actions légales déterministe ; sous-ensemble pile / lancement / résolution ; combat et actions basées sur l’état simplifiés ; scénarios, replay et observabilité pour non-régression.
+- **Non supporté ou partiel** : exhaustivité des règles MTG officielles, formats multi-joueurs au-delà du duel, effets et capacités arbitraires, UI, persistance ou API réseau dans ce dépôt, héuristique de jeu automatique couplée au moteur.
+
+Pour le détail d’une feature, voir `docs/features/` et les spécifications dans `docs/001_specifications.md`.
+
 ## Prérequis
 
-- Python **3.11** ou supérieur
+- Python **3.11** ou supérieur (3.11 et 3.12 sont exercés en CI)
 - Un environnement virtuel recommandé
 
 ## Installation (développement)
@@ -13,14 +21,16 @@ Bibliothèque Python pour un **moteur de règles Magic: The Gathering** orienté
 python -m pip install -e ".[dev]"
 ```
 
-Construction d’une roue (wheel) :
+## Publication / build (wheel et sdist)
+
+Pour produire une **wheel** et un **sdist** standard :
 
 ```bash
 python -m pip install build
 python -m build
 ```
 
-Les artefacts sont produits sous `dist/`.
+Les artefacts sont écrits dans `dist/`. Avant toute publication, exécuter la chaîne de vérification ci-dessous (ou s’appuyer sur la CI GitHub Actions sur `main`). Un récapitulatif des critères « GO » est disponible dans `docs/release_readiness.md`.
 
 ## Utilisation minimale
 
@@ -237,6 +247,7 @@ Les rapports de couverture HTML et XML sont générés sous `docs/tests/coverage
 
 - Contraintes de développement : `docs/000_dev_constraints.md`
 - Spécifications : `docs/001_specifications.md`
+- Mise en conformité publication : `docs/release_readiness.md`
 - Feature replay / scénarios : `docs/features/08_scenarios_replay_and_observability.md`
 - Journal de développement : `docs/dev_diary.md`
 - Historique des versions : `CHANGELOG.md`
@@ -246,7 +257,8 @@ Les rapports de couverture HTML et XML sont générés sous `docs/tests/coverage
 - Branches de fonctionnalité : `feature/<nom>`
 - Commits : [Conventional Commits](https://www.conventionalcommits.org/)
 - Tests et outils de qualité doivent passer avant fusion sur `main`
+- Intégration continue : `.github/workflows/ci.yml` (push et pull requests vers `main`)
 
 ## Licence
 
-Voir la métadonnée `license` dans `pyproject.toml` et les conventions du dépôt Baobab.
+Ce dépôt est distribué sous **licence propriétaire**. Les droits d’usage, de copie et de redistribution sont **réservés** ; se référer au fichier [**LICENSE**](LICENSE) à la racine du dépôt pour le texte complet. Les métadonnées du paquet (`pyproject.toml`) pointent vers ce même fichier.

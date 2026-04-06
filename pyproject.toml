@@ -4,16 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "baobab-mtg-rules-engine"
-version = "0.8.0"
+version = "0.8.1"
 description = "Moteur de règles Magic: The Gathering déterministe et inspectable pour le projet Baobab."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
+license = { file = "LICENSE" }
 authors = [{ name = "Baobab MTG" }]
 keywords = ["magic-the-gathering", "rules-engine", "baobab"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -34,8 +35,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/baobab-mtg/baobab-mtg-rules-engine"
-Documentation = "https://github.com/baobab-mtg/baobab-mtg-rules-engine/tree/main/docs"
+Homepage = "https://github.com/baobabgit/baobab-mtg-rules-engine"
+Documentation = "https://github.com/baobabgit/baobab-mtg-rules-engine/tree/main/docs"
+Repository = "https://github.com/baobabgit/baobab-mtg-rules-engine.git"
+Issues = "https://github.com/baobabgit/baobab-mtg-rules-engine/issues"
+Changelog = "https://github.com/baobabgit/baobab-mtg-rules-engine/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
