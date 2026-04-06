@@ -18,6 +18,7 @@ from baobab_mtg_rules_engine.domain.zone_location import ZoneLocation
 from baobab_mtg_rules_engine.domain.zone_type import ZoneType
 from baobab_mtg_rules_engine.exceptions.insufficient_library_error import InsufficientLibraryError
 from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
+from baobab_mtg_rules_engine.stack.stack_object import StackObject
 
 
 class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -51,6 +52,7 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
         self._lands_played_this_turn: int = 0
         self._declared_attackers: list[GameObjectId] = []
         self._declared_blocks: list[tuple[GameObjectId, GameObjectId]] = []
+        self._stack_object_views: dict[GameObjectId, StackObject] = {}
 
     @classmethod
     def new_two_player(
@@ -144,6 +146,31 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
     def turn_engine_spend_floating_mana(self, player_index: int, amount: int) -> None:
         """Délègue la dépense de mana flottant au joueur indiqué."""
         self._players[player_index].spend_floating_mana(amount)
+
+    def attach_stack_object_view(
+        self, spell_stack_object_id: GameObjectId, view: StackObject
+    ) -> None:
+        """Associe une vue :class:`StackObject` à un sort présent sur la pile.
+
+        :raises InvalidGameStateError: si un enregistrement existe déjà pour cet identifiant.
+        """
+        if spell_stack_object_id in self._stack_object_views:
+            msg = "Une vue de pile existe déjà pour cet identifiant de sort."
+            raise InvalidGameStateError(msg, field_name="spell_stack_object_id")
+        self._stack_object_views[spell_stack_object_id] = view
+
+    def detach_stack_object_view(self, spell_stack_object_id: GameObjectId) -> StackObject | None:
+        """Retire la vue associée ; retourne la vue si elle existait."""
+        return self._stack_object_views.pop(spell_stack_object_id, None)
+
+    def get_stack_object_view(self, spell_stack_object_id: GameObjectId) -> StackObject | None:
+        """:return: La vue enregistrée ou ``None``."""
+        return self._stack_object_views.get(spell_stack_object_id)
+
+    @property
+    def stack_object_views(self) -> tuple[StackObject, ...]:
+        """:return: Copie immuable des vues de pile (ordre non garanti)."""
+        return tuple(self._stack_object_views.values())
 
     def apply_play_land(self, player_index: int, land_object_id: GameObjectId) -> None:
         """Joue un terrain depuis la main vers le champ (identité conservée, modèle simplifié).

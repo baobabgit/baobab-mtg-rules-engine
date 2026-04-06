@@ -10,6 +10,7 @@ from baobab_mtg_rules_engine.exceptions.deck_validation_error import DeckValidat
 from baobab_mtg_rules_engine.exceptions.insufficient_library_error import InsufficientLibraryError
 from baobab_mtg_rules_engine.exceptions.illegal_game_action_error import IllegalGameActionError
 from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
+from baobab_mtg_rules_engine.exceptions.invalid_spell_target_error import InvalidSpellTargetError
 from baobab_mtg_rules_engine.exceptions.validation_exception import ValidationException
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "IllegalGameActionError",
     "InsufficientLibraryError",
     "InvalidGameStateError",
+    "InvalidSpellTargetError",
     "UnsupportedRuleException",
     "ValidationException",
 ]

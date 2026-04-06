@@ -83,3 +83,9 @@ class TestBaobabMtgCatalogAdapter:
             adapter.spell_generic_mana_cost("x")
         with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
             adapter.simple_activated_ability_costs("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.spell_target_kind("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.is_creature_spell_catalog_key("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.spell_damage_to_player_amount("x")

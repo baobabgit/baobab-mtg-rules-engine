@@ -11,6 +11,7 @@ from baobab_mtg_rules_engine.actions.declare_blocker_action import DeclareBlocke
 from baobab_mtg_rules_engine.actions.game_action import GameAction
 from baobab_mtg_rules_engine.actions.pass_priority_action import PassPriorityAction
 from baobab_mtg_rules_engine.actions.play_land_action import PlayLandAction
+from baobab_mtg_rules_engine.casting.spell_cast_service import SpellCastService
 from baobab_mtg_rules_engine.catalog.card_gameplay_port import CardGameplayPort
 from baobab_mtg_rules_engine.domain.game_object_id import GameObjectId
 from baobab_mtg_rules_engine.domain.game_state import GameState
@@ -21,12 +22,16 @@ from baobab_mtg_rules_engine.domain.step import Step
 from baobab_mtg_rules_engine.domain.zone_type import ZoneType
 from baobab_mtg_rules_engine.engine.turn_manager import TurnManager
 from baobab_mtg_rules_engine.exceptions.illegal_game_action_error import IllegalGameActionError
+from baobab_mtg_rules_engine.targeting.simple_target import SimpleTarget
 
 _PASS_SINGLETON = PassPriorityAction()
 
 
 class LegalActionService:
     """Liste les actions supportées à un instant donné et les applique sans court-circuit."""
+
+    def __init__(self, spell_cast: SpellCastService | None = None) -> None:
+        self._spell_cast: SpellCastService = spell_cast or SpellCastService()
 
     def compute_legal_actions(
         self,
@@ -41,8 +46,7 @@ class LegalActionService:
         self._assert_holding_priority(state, acting_player_index)
         actions: list[GameAction] = [_PASS_SINGLETON]
         actions.extend(self._legal_lands(state, rules, acting_player_index))
-        for oid in self._legal_cast_spell_object_ids(state, rules, acting_player_index):
-            actions.append(CastSpellAction(oid))
+        actions.extend(self._legal_cast_spell_actions(state, rules, acting_player_index))
         actions.extend(self._legal_activations(state, rules, acting_player_index))
         actions.extend(self._legal_attackers(state, rules, acting_player_index))
         actions.extend(self._legal_blockers(state, rules, acting_player_index))
@@ -71,18 +75,12 @@ class LegalActionService:
         elif isinstance(action, PlayLandAction):
             state.apply_play_land(acting_player_index, action.land_object_id)
         elif isinstance(action, CastSpellAction):
-            card = state.get_object(action.spell_object_id)
-            if not isinstance(card, InGameCard) or isinstance(card, SpellOnStack):
-                msg = (
-                    "Le sort doit être une carte en main (représentation InGameCard) "
-                    "avant résolution."
-                )
-                raise IllegalGameActionError(msg, field_name="spell_object_id")
-            cost = rules.spell_generic_mana_cost(card.card_reference.catalog_key)
-            state.apply_cast_spell_hand_to_stack(
-                acting_player_index,
-                action.spell_object_id,
-                generic_mana_cost=cost,
+            self._spell_cast.cast_spell(
+                state,
+                rules,
+                caster_player_index=acting_player_index,
+                spell_hand_object_id=action.spell_object_id,
+                targets=action.targets,
             )
         elif isinstance(action, ActivateSimpleAbilityAction):
             state.apply_activate_simple_ability(
@@ -123,33 +121,67 @@ class LegalActionService:
     def _sorcery_timing_ok(self, state: GameState, acting: int) -> bool:
         return self._main_phase_active_player(state, acting) and self._stack_empty(state)
 
-    def _legal_cast_spell_object_ids(
+    def _legal_cast_spell_actions(
         self,
         state: GameState,
         rules: CardGameplayPort,
         acting: int,
-    ) -> tuple[GameObjectId, ...]:
-        """Identifiants en main lançables à vitesse rituelle et/ou instantanée (sans doublon)."""
-        ordered: list[GameObjectId] = []
+    ) -> list[CastSpellAction]:
+        """Combinaisons (sort en main, cibles) lançables avec priorité pour ce joueur."""
         hand = state.players[acting].zone(ZoneType.HAND).object_ids()
+        out: list[CastSpellAction] = []
         for oid in sorted(hand, key=lambda x: x.value):
-            obj = state.get_object(oid)
-            if not isinstance(obj, InGameCard) or isinstance(obj, SpellOnStack):
-                continue
-            key = obj.card_reference.catalog_key
-            is_sorcery_key = rules.is_sorcery_speed_spell_catalog_key(key)
-            is_instant_key = rules.is_instant_speed_spell_catalog_key(key)
-            if not is_sorcery_key and not is_instant_key:
-                continue
-            sorcery_ok = is_sorcery_key and self._sorcery_timing_ok(state, acting)
-            instant_ok = is_instant_key
-            if not sorcery_ok and not instant_ok:
-                continue
-            cost = rules.spell_generic_mana_cost(key)
-            if state.players[acting].floating_mana < cost:
-                continue
-            ordered.append(oid)
-        return tuple(ordered)
+            out.extend(self._cast_spell_actions_for_hand_card(state, rules, acting, oid))
+        return out
+
+    def _cast_spell_actions_for_hand_card(
+        self,
+        state: GameState,
+        rules: CardGameplayPort,
+        acting: int,
+        oid: GameObjectId,
+    ) -> list[CastSpellAction]:
+        """Actions de lancement possibles pour une carte en main donnée."""
+        actions: list[CastSpellAction] = []
+        obj = state.get_object(oid)
+        if not isinstance(obj, InGameCard) or isinstance(obj, SpellOnStack):
+            return actions
+        key = obj.card_reference.catalog_key
+        is_sorcery_key = rules.is_sorcery_speed_spell_catalog_key(key)
+        is_instant_key = rules.is_instant_speed_spell_catalog_key(key)
+        is_creature_spell = rules.is_creature_spell_catalog_key(key)
+        if not is_sorcery_key and not is_instant_key and not is_creature_spell:
+            return actions
+        if not is_instant_key and not self._sorcery_timing_ok(state, acting):
+            return actions
+        cost = rules.spell_generic_mana_cost(key)
+        if state.players[acting].floating_mana < cost:
+            return actions
+        target_kind = rules.spell_target_kind(key)
+        if target_kind == "none":
+            actions.append(CastSpellAction(oid, ()))
+        elif target_kind == "creature":
+            for cid in self._sorted_battlefield_creature_ids(state, rules):
+                actions.append(CastSpellAction(oid, (SimpleTarget.for_permanent(cid),)))
+        elif target_kind == "player":
+            for player_index in (0, 1):
+                actions.append(CastSpellAction(oid, (SimpleTarget.for_player(player_index),)))
+        return actions
+
+    def _sorted_battlefield_creature_ids(
+        self,
+        state: GameState,
+        rules: CardGameplayPort,
+    ) -> tuple[GameObjectId, ...]:
+        found: list[GameObjectId] = []
+        for player in state.players:
+            for perm_id in player.zone(ZoneType.BATTLEFIELD).object_ids():
+                perm = state.get_object(perm_id)
+                if not isinstance(perm, Permanent):
+                    continue
+                if rules.is_creature_catalog_key(perm.card_reference.catalog_key):
+                    found.append(perm_id)
+        return tuple(sorted(found, key=lambda i: i.value))
 
     def _legal_lands(
         self,

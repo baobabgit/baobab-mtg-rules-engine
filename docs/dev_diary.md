@@ -2,6 +2,28 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-06 — feature `05_casting_stack_and_resolution`
+
+### Modifications
+
+- `StackObject`, `SpellCastService`, `StackResolutionService`, `TargetValidator`, `SimpleTarget` ; `InvalidSpellTargetError` ; vues pile sur `GameState` ; événements `SPELL_RESOLVED`, `SPELL_FIZZLED`, `PLAYER_DAMAGED`
+- `LegalActionService` : sorts avec cibles déterministes, application via lancement réel ; refactor `_cast_spell_actions_for_hand_card` (pylint `too-many-locals`)
+- `CardGameplayPort` / adaptateurs mémoire et Baobab pour créatures-sort, cibles et dégâts joueur (hors périmètre = `UnsupportedRuleException` côté Baobab)
+- Tests miroir + `cast_spell_test_helpers.py` ; `pyproject.toml` : `min-similarity-lines` pylint pour le bruit des tests ; `simple_target` sans `assert` (bandit B101)
+- README (section pile / résolution), CHANGELOG, version **0.6.0** ; couverture **~94 %**
+
+### Buts
+
+- Chaîne lancer → empiler → résoudre avec revalidation des cibles et fizzle explicite
+
+### Impact
+
+- Base pour des effets plus riches sans perdre le déterminisme ni l’inspectabilité
+
+### Note PR / merge
+
+- Branche `feature/05-casting-stack-and-resolution` → PR vers `main` après contrôles qualité au vert
+
 ## 2026-04-05 — feature `04_legal_actions_engine`
 
 ### Modifications

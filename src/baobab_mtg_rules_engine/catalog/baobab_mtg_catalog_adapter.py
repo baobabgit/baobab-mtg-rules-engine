@@ -76,6 +76,21 @@ class BaobabMtgCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
         raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
 
+    def spell_target_kind(self, catalog_key: str) -> str:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def is_creature_spell_catalog_key(self, catalog_key: str) -> bool:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def spell_damage_to_player_amount(self, catalog_key: str) -> int:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
     def simple_activated_ability_costs(self, catalog_key: str) -> tuple[int, ...]:
         _ = catalog_key
         msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."

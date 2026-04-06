@@ -18,6 +18,9 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         instant_spell_keys: frozenset[str] | None = None,
         spell_mana_cost_by_key: dict[str, int] | None = None,
         activated_ability_costs_by_key: dict[str, tuple[int, ...]] | None = None,
+        spell_target_kind_by_key: dict[str, str] | None = None,
+        creature_spell_keys: frozenset[str] | None = None,
+        spell_damage_to_player_by_key: dict[str, int] | None = None,
     ) -> None:
         self._supported: frozenset[str] = supported_keys
         self._unlimited: frozenset[str] = unlimited_copy_keys or frozenset()
@@ -29,6 +32,9 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         self._activated_costs: dict[str, tuple[int, ...]] = dict(
             activated_ability_costs_by_key or {},
         )
+        self._spell_target_kind: dict[str, str] = dict(spell_target_kind_by_key or {})
+        self._creature_spells: frozenset[str] = creature_spell_keys or frozenset()
+        self._spell_damage_player: dict[str, int] = dict(spell_damage_to_player_by_key or {})
 
     def is_supported_catalog_key(self, catalog_key: str) -> bool:
         """:return: Appartenance à l'ensemble supporté."""
@@ -57,6 +63,18 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
     def spell_generic_mana_cost(self, catalog_key: str) -> int:
         """:return: Coût générique ou ``0``."""
         return int(self._spell_costs.get(catalog_key, 0))
+
+    def spell_target_kind(self, catalog_key: str) -> str:
+        """:return: ``none``, ``creature`` ou ``player`` ; défaut ``none``."""
+        return str(self._spell_target_kind.get(catalog_key, "none"))
+
+    def is_creature_spell_catalog_key(self, catalog_key: str) -> bool:
+        """:return: Sort créature (résolution vers permanent)."""
+        return catalog_key in self._creature_spells
+
+    def spell_damage_to_player_amount(self, catalog_key: str) -> int:
+        """:return: Montant de dégâts joueur ou ``0``."""
+        return int(self._spell_damage_player.get(catalog_key, 0))
 
     def simple_activated_ability_costs(self, catalog_key: str) -> tuple[int, ...]:
         """:return: Coûts d'activation simples enregistrés."""
