@@ -119,6 +119,7 @@ Le paquet `baobab_mtg_rules_engine.actions` décrit les **actions atomiques** re
 
 - **Timing rituel** (terrain, rituel) : principale pré- ou post-combat du joueur **actif**, **pile vide**.
 - **Instant** : autorisé avec la priorité même si la pile n’est pas vide (modèle simplifié).
+- **Combat** : attaquants / bloqueurs avec **force et endurance** catalogue strictement positives ; **au plus un bloqueur par attaquant** ; déclarations validées par `AttackerDeclarationService` et `BlockerDeclarationService`.
 - **Application** : `apply_action` recalcule l’ensemble légal puis refuse toute action absente (`IllegalGameActionError`) avant mutation ; la passe délègue à `TurnManager.pass_priority()`.
 
 ```python
@@ -162,6 +163,24 @@ stack_id = SpellCastService().cast_spell(
     targets=(),
 )
 StackResolutionService().resolve_top(state, rules)
+```
+
+## Combat simplifié, ABS et fin de partie
+
+Le paquet `baobab_mtg_rules_engine.combat` et `StateBasedActionService` couvrent un **duel minimal** : pas de piétinement, pas de plusieurs bloqueurs sur le même attaquant, pas de prévention / remplacement avancés.
+
+- **`CombatService.resolve_combat_damage_step`** : à l’étape `COMBAT_DAMAGE`, attaquant seul inflige sa **force** en dégâts au joueur défenseur ; avec un bloqueur, **échange** de blessures marquées (`Permanent.marked_damage`) selon les forces catalogue.
+- **`StateBasedActionService.apply_all`** : envoie en défausse les créatures dont les blessures marquées sont **≥ endurance** ; enregistre la **défaite** d’un joueur à 0 PV ou moins (ou **match nul** si les deux sont à 0 ou moins). À appeler après les dégâts de combat (ou après d’autres sources de dégâts si vous modélisez la fin de partie ainsi).
+- **`TurnManager(..., rules=catalog)`** : à l’entrée en `COMBAT_DAMAGE`, enchaîne résolution des blessures puis `apply_all` si un `CardGameplayPort` est fourni ; à l’étape **pioche**, une bibliothèque vide déclenche `record_player_defeat(..., reason="library")`. En **nettoyage**, les blessures marquées sur le champ sont effacées.
+
+```python
+from baobab_mtg_rules_engine.combat.combat_service import CombatService
+from baobab_mtg_rules_engine.engine import StateBasedActionService, TurnManager
+
+# state en COMBAT_DAMAGE avec attaquants / bloqueurs déjà déclarés ; rules avec P/T
+CombatService().resolve_combat_damage_step(state, rules)
+StateBasedActionService().apply_all(state, rules)
+# vainqueur : state.winner_player_index ; match nul : state.is_draw_game
 ```
 
 ## Vérification qualité (pipeline local)

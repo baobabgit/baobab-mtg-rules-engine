@@ -46,6 +46,7 @@ def _catalog_with_gameplay() -> InMemoryCardCatalogAdapter:
         instant_spell_keys=frozenset({"instant1"}),
         spell_mana_cost_by_key={"sorcery1": 1, "instant1": 1},
         activated_ability_costs_by_key={"rock": (1, 2)},
+        creature_power_toughness_by_key={"bear": (2, 2), "rock": (1, 5)},
     )
 
 
@@ -272,6 +273,21 @@ class TestLegalActionServiceApplyAndCombat:
             for a in legal
         )
 
+    def test_no_second_blocker_action_for_already_blocked_attacker(self) -> None:
+        """Un attaquant déjà engagé ne propose plus de déclaration de bloqueur."""
+        state = GameState.new_two_player()
+        state.replace_turn_state(TurnState(0, 2, Step.DECLARE_BLOCKERS))
+        a1 = _register_battlefield_creature(state, 0, "bear")
+        b1 = _register_battlefield_creature(state, 1, "bear")
+        state.turn_engine_set_priority_player(1)
+        state.apply_declare_attacker(0, a1)
+        state.apply_declare_blocker(1, b1, a1)
+        svc = LegalActionService()
+        rules = _catalog_with_gameplay()
+        legal = svc.compute_legal_actions(state, rules, 1)
+        block_actions = [a for a in legal if isinstance(a, DeclareBlockerAction)]
+        assert block_actions == []
+
     def test_apply_unknown_subclass_raises_even_if_marked_legal(self) -> None:
         """Branche défensive si une sous-classe :class:`GameAction` non gérée est injectée."""
 
@@ -412,6 +428,7 @@ class TestLegalActionServiceEdgeBranches:
             supported,
             creature_keys=frozenset({"rock"}),
             activated_ability_costs_by_key={"rock": (-1, 1)},
+            creature_power_toughness_by_key={"rock": (1, 5)},
         )
         svc = LegalActionService()
         legal = svc.compute_legal_actions(state, rules, 0)

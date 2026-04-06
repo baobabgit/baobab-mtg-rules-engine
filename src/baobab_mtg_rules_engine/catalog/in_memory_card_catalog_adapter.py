@@ -21,6 +21,7 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         spell_target_kind_by_key: dict[str, str] | None = None,
         creature_spell_keys: frozenset[str] | None = None,
         spell_damage_to_player_by_key: dict[str, int] | None = None,
+        creature_power_toughness_by_key: dict[str, tuple[int, int]] | None = None,
     ) -> None:
         self._supported: frozenset[str] = supported_keys
         self._unlimited: frozenset[str] = unlimited_copy_keys or frozenset()
@@ -35,6 +36,7 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         self._spell_target_kind: dict[str, str] = dict(spell_target_kind_by_key or {})
         self._creature_spells: frozenset[str] = creature_spell_keys or frozenset()
         self._spell_damage_player: dict[str, int] = dict(spell_damage_to_player_by_key or {})
+        self._creature_pt: dict[str, tuple[int, int]] = dict(creature_power_toughness_by_key or {})
 
     def is_supported_catalog_key(self, catalog_key: str) -> bool:
         """:return: Appartenance à l'ensemble supporté."""
@@ -79,3 +81,17 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
     def simple_activated_ability_costs(self, catalog_key: str) -> tuple[int, ...]:
         """:return: Coûts d'activation simples enregistrés."""
         return tuple(self._activated_costs.get(catalog_key, ()))
+
+    def creature_power(self, catalog_key: str) -> int:
+        """:return: Force déclarée ou ``0``."""
+        pt = self._creature_pt.get(catalog_key)
+        if pt is None:
+            return 0
+        return int(pt[0])
+
+    def creature_toughness(self, catalog_key: str) -> int:
+        """:return: Endurance déclarée ou ``0``."""
+        pt = self._creature_pt.get(catalog_key)
+        if pt is None:
+            return 0
+        return int(pt[1])

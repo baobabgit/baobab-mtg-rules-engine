@@ -89,3 +89,7 @@ class TestBaobabMtgCatalogAdapter:
             adapter.is_creature_spell_catalog_key("x")
         with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
             adapter.spell_damage_to_player_amount("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.creature_power("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.creature_toughness("x")

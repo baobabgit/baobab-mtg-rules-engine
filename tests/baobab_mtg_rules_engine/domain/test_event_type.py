@@ -14,3 +14,8 @@ class TestEventType:
         assert "SPELL_RESOLVED" in names
         assert "SPELL_FIZZLED" in names
         assert "PLAYER_DAMAGED" in names
+        assert "COMBAT_DAMAGE_ASSIGNED" in names
+        assert "CREATURE_DESTROYED" in names
+        assert "PLAYER_DEFEATED" in names
+        assert "GAME_VICTORY_ASSIGNED" in names
+        assert "GAME_DRAW" in names

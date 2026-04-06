@@ -53,6 +53,8 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
         self._declared_attackers: list[GameObjectId] = []
         self._declared_blocks: list[tuple[GameObjectId, GameObjectId]] = []
         self._stack_object_views: dict[GameObjectId, StackObject] = {}
+        self._winner_player_index: int | None = None
+        self._is_draw: bool = False
 
     @classmethod
     def new_two_player(
@@ -133,6 +135,73 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
     def declared_blocks(self) -> tuple[tuple[GameObjectId, GameObjectId], ...]:
         """:return: Paires (bloqueur, attaquant) déclarées."""
         return tuple(self._declared_blocks)
+
+    @property
+    def winner_player_index(self) -> int | None:
+        """:return: Index du vainqueur si la partie est décidée sans match nul, sinon ``None``."""
+        return self._winner_player_index
+
+    @property
+    def is_draw_game(self) -> bool:
+        """:return: ``True`` si la partie s'est terminée par match nul (ex. deux joueurs à 0 PV)."""
+        return self._is_draw
+
+    @property
+    def is_game_finished(self) -> bool:
+        """:return: ``True`` si un vainqueur est désigné ou match nul enregistré."""
+        return self._winner_player_index is not None or self._is_draw
+
+    def record_player_defeat(self, loser_player_index: int, *, reason: str) -> None:
+        """Enregistre la défaite d'un joueur et le vainqueur adverse (idempotent si déjà terminé).
+
+        :param loser_player_index: ``0`` ou ``1``.
+        :param reason: Libellé court pour le journal (ex. ``life``, ``library``).
+        :raises InvalidGameStateError: si l'index est invalide.
+        """
+        if loser_player_index not in (0, 1):
+            msg = "Index joueur invalide pour une défaite."
+            raise InvalidGameStateError(msg, field_name="loser_player_index")
+        if self.is_game_finished:
+            return
+        self._winner_player_index = 1 - loser_player_index
+        self.record_engine_event(
+            EventType.PLAYER_DEFEATED,
+            (
+                ("loser_player_index", loser_player_index),
+                ("reason", reason),
+            ),
+        )
+        self.record_engine_event(
+            EventType.GAME_VICTORY_ASSIGNED,
+            (("winner_player_index", self._winner_player_index),),
+        )
+
+    def record_draw_game(self) -> None:
+        """Termine la partie sans vainqueur (idempotent si déjà terminé)."""
+        if self.is_game_finished:
+            return
+        self._is_draw = True
+        self.record_engine_event(EventType.GAME_DRAW, ())
+
+    def clear_all_marked_damage_on_battlefield(self) -> None:
+        """Remet à zéro les blessures marquées sur tous les permanents (fin de tour simplifiée)."""
+        cleared = 0
+        for player in self._players:
+            for oid in player.zone(ZoneType.BATTLEFIELD).object_ids():
+                obj = self.get_object(oid)
+                if isinstance(obj, Permanent) and obj.marked_damage > 0:
+                    obj.clear_marked_damage()
+                    cleared += 1
+        if cleared > 0:
+            self.record_engine_event(
+                EventType.ALL_PERMANENT_DAMAGE_CLEARED,
+                (("permanents_affected", cleared),),
+            )
+
+    def _assert_combat_declarations_allowed(self) -> None:
+        if self.is_game_finished:
+            msg = "La partie est terminée : plus de déclarations de combat."
+            raise InvalidGameStateError(msg, field_name="game")
 
     def turn_engine_reset_turn_resource_counters(self) -> None:
         """Remet les compteurs de tour (terrains) ; appelé en début de tour adverse."""
@@ -275,6 +344,7 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
         creature_object_id: GameObjectId,
     ) -> None:
         """Enregistre un attaquant (étape déclaration simplifiée)."""
+        self._assert_combat_declarations_allowed()
         loc = self.find_location(creature_object_id)
         if loc.zone_type is not ZoneType.BATTLEFIELD or loc.player_index != active_player_index:
             msg = "L'attaquant doit être une créature sur le champ du joueur actif."
@@ -299,9 +369,14 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
         attacker_object_id: GameObjectId,
     ) -> None:
         """Enregistre un bloqueur sur un attaquant déclaré."""
+        self._assert_combat_declarations_allowed()
         if attacker_object_id not in self._declared_attackers:
             msg = "L'attaquant doit être déclaré."
             raise InvalidGameStateError(msg, field_name="attacker_object_id")
+        for _b, existing_a in self._declared_blocks:
+            if existing_a == attacker_object_id:
+                msg = "Un bloqueur est déjà assigné à cet attaquant."
+                raise InvalidGameStateError(msg, field_name="attacker_object_id")
         bloc_loc = self.find_location(blocker_object_id)
         if (
             bloc_loc.zone_type is not ZoneType.BATTLEFIELD
