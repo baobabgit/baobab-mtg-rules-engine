@@ -6,7 +6,7 @@ Ce document résume les prérequis et vérifications avant publication publique 
 
 - Python **3.11+** (3.11 et 3.12 couverts par la CI GitHub Actions).
 - Compte et droits pour publier sur l’index PyPI cible (si publication officielle).
-- Dépôt aligné sur `main` avec CI verte.
+- Dépôt aligné sur `main` ; la CI ne s’exécute qu’au **tag** (voir ci-dessous).
 
 ## Vérifications locales (ordre recommandé)
 
@@ -34,8 +34,8 @@ La configuration `pytest` / `coverage` dans `pyproject.toml` impose une couvertu
 - Aucune régression sur les contrôles qualité (black, flake8, mypy, pylint, bandit, pytest + couverture).
 - Métadonnées `pyproject.toml` cohérentes (version SemVer, URLs du dépôt `baobabgit/baobab-mtg-rules-engine`, statut de maturité, licence propriétaire).
 - `CHANGELOG.md` à jour pour la version publiée.
-- CI sur `main` : workflow `.github/workflows/ci.yml` au vert.
+- Après push d’un tag `vX.Y.Z` pointant vers un commit de `main` : workflow `.github/workflows/ci.yml` au vert puis **GitHub Release** publiée avec wheel et sdist.
 
 ## CI distante
 
-Les pushes et pull requests vers `main` exécutent la même chaîne qualité et une construction `python -m build` ; les artefacts `dist/` sont conservés en tant qu’artefacts GitHub Actions sur le job `package`.
+Déclenchement **uniquement** sur **push de tag** `v*.*.*`. Le commit étiqueté doit être dans l’historique de `main`. Enchaînement : vérification → **quality** (Python 3.11 et 3.12) → **release** (`python -m build` + création de la release avec pièces jointes `dist/*`).

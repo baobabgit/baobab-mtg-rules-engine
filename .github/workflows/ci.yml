@@ -1,13 +1,38 @@
 name: CI
 
+# Déclenché uniquement par la publication d’un tag de version sur le dépôt.
+# Le commit pointé par le tag doit être dans l’historique de `main` (voir job verify).
+
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
 
 jobs:
+  verify-tag-on-main:
+    name: Verify tag commit on main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure tagged commit is an ancestor of origin/main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
+            echo "::error::Le commit étiqueté n'est pas dans l'historique de main. Tags uniquement sur main."
+            exit 1
+          fi
+          echo "OK: ${{ github.sha }} est ancêtre de origin/main."
+
   quality:
+    name: Quality (Python ${{ matrix.python-version }})
+    needs: verify-tag-on-main
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -47,10 +72,10 @@ jobs:
       - name: pytest (coverage ≥ 90 %)
         run: python -m pytest
 
-  package:
-    runs-on: ubuntu-latest
+  release:
+    name: GitHub Release
     needs: quality
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,9 +94,12 @@ jobs:
       - name: Build sdist and wheel
         run: python -m build
 
-      - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release with distributions
+        uses: softprops/action-gh-release@v2
         with:
-          name: dist-py311
-          path: dist/*
-          if-no-files-found: error
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

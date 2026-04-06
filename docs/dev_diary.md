@@ -2,6 +2,13 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-06 — CI sur tags + release GitHub (v1.0.0)
+
+### Modifications
+
+- `.github/workflows/ci.yml` : trigger **tags** `v*.*.*` uniquement ; job vérifiant que le commit est sur `main` ; `quality` inchangé ; job `release` avec `softprops/action-gh-release` et wheel/sdist
+- Version package **1.0.0** ; `CHANGELOG` ; README et `docs/release_readiness.md` alignés
+
 ## 2026-04-06 — release readiness (publication)
 
 ### Modifications

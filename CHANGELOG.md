@@ -5,6 +5,12 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format s’inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [1.0.0] - 2026-04-06
+
+### Changed
+
+- CI GitHub Actions : déclenchement **uniquement** sur push de tag `v*.*.*` dont le commit est sur `main` ; après contrôle qualité, **création d’une GitHub Release** avec wheel et sdist en pièces jointes
+
 ## [0.8.1] - 2026-04-06
 
 ### Changed

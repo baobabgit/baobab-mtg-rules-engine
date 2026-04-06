@@ -30,7 +30,7 @@ python -m pip install build
 python -m build
 ```
 
-Les artefacts sont écrits dans `dist/`. Avant toute publication, exécuter la chaîne de vérification ci-dessous (ou s’appuyer sur la CI GitHub Actions sur `main`). Un récapitulatif des critères « GO » est disponible dans `docs/release_readiness.md`.
+Les artefacts sont écrits dans `dist/`. Avant toute publication, exécuter la chaîne de vérification ci-dessous. La **CI GitHub Actions** ne tourne **que** lors du push d’un **tag de version** `v*.*.*` sur un commit de `main` : elle exécute les contrôles qualité puis crée une **Release GitHub** avec les fichiers `dist/`. Voir `docs/release_readiness.md`.
 
 ## Utilisation minimale
 
@@ -257,7 +257,7 @@ Les rapports de couverture HTML et XML sont générés sous `docs/tests/coverage
 - Branches de fonctionnalité : `feature/<nom>`
 - Commits : [Conventional Commits](https://www.conventionalcommits.org/)
 - Tests et outils de qualité doivent passer avant fusion sur `main`
-- Intégration continue : `.github/workflows/ci.yml` (push et pull requests vers `main`)
+- Intégration continue : `.github/workflows/ci.yml` (push de tag `v*.*.*` sur `main` → qualité + release GitHub)
 
 ## Licence
 
