@@ -11,6 +11,7 @@ from baobab_mtg_rules_engine.exceptions.insufficient_library_error import Insuff
 from baobab_mtg_rules_engine.exceptions.illegal_game_action_error import IllegalGameActionError
 from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
 from baobab_mtg_rules_engine.exceptions.invalid_spell_target_error import InvalidSpellTargetError
+from baobab_mtg_rules_engine.exceptions.replay_sequence_error import ReplaySequenceError
 from baobab_mtg_rules_engine.exceptions.validation_exception import ValidationException
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "InsufficientLibraryError",
     "InvalidGameStateError",
     "InvalidSpellTargetError",
+    "ReplaySequenceError",
     "UnsupportedRuleException",
     "ValidationException",
 ]

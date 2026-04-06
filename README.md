@@ -183,6 +183,41 @@ StateBasedActionService().apply_all(state, rules)
 # vainqueur : state.winner_player_index ; match nul : state.is_draw_game
 ```
 
+## Scénarios, replay et observabilité
+
+Les modules `baobab_mtg_rules_engine.scenarios`, `replay` et `observability` servent aux **tests de non-régression**, au **debug** et à une **simulation reproductible** sans persistance ni UI.
+
+- **`ScenarioBuilder`** : fabrique un `ScenarioContext` (état, alias stables, `TurnManager`, `LegalActionService`) de façon déterministe.
+- **`RecordedGameAction`** : décrit une action par un **genre** et des paramètres (références d’objets = **alias** résolus au replay).
+- **`GameReplayService`** : `replay_all` / `apply_step` ; helpers d’assertion sur la **trace d’événements** et le déterminisme entre deux rejouages.
+- **`GameStateInspector`** : `event_trace_tuple` (comparaisons stables), `format_events`, `snapshot_summary`.
+
+Le périmètre exact (supporté / non supporté) est détaillé dans `docs/features/08_scenarios_replay_and_observability.md`. Une démonstration minimale : `examples/replay_minimal_example.py`.
+
+```python
+from baobab_mtg_rules_engine.catalog import InMemoryCardCatalogAdapter
+from baobab_mtg_rules_engine.domain.step import Step
+from baobab_mtg_rules_engine.domain.turn_state import TurnState
+from baobab_mtg_rules_engine.observability.game_state_inspector import GameStateInspector
+from baobab_mtg_rules_engine.replay.game_replay_service import GameReplayService
+from baobab_mtg_rules_engine.replay.recorded_game_action import RecordedGameAction
+from baobab_mtg_rules_engine.scenarios.scenario_builder import ScenarioBuilder
+
+rules = InMemoryCardCatalogAdapter(frozenset({"forest"}), land_keys=frozenset({"forest"}))
+ctx = (
+    ScenarioBuilder(rules)
+    .with_two_player_game()
+    .with_turn_state(TurnState(0, 1, Step.MAIN_PRECOMBAT))
+    .with_priority_player(0)
+    .add_card_in_hand(0, "forest", alias="f1")
+    .build()
+)
+GameReplayService().replay_all(ctx, (RecordedGameAction.play_land(object_alias="f1"),))
+print(GameStateInspector.event_trace_tuple(ctx.state))
+```
+
+Les séquences invalides lèvent `ReplaySequenceError` (dérivée de `ValidationException`).
+
 ## Vérification qualité (pipeline local)
 
 Après `pip install -e ".[dev]"`, exécuter dans l’ordre :
@@ -202,6 +237,7 @@ Les rapports de couverture HTML et XML sont générés sous `docs/tests/coverage
 
 - Contraintes de développement : `docs/000_dev_constraints.md`
 - Spécifications : `docs/001_specifications.md`
+- Feature replay / scénarios : `docs/features/08_scenarios_replay_and_observability.md`
 - Journal de développement : `docs/dev_diary.md`
 - Historique des versions : `CHANGELOG.md`
 

@@ -5,6 +5,19 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format s’inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.8.0] - 2026-04-05
+
+### Added
+
+- Paquets `scenarios` (`ScenarioBuilder`, `ScenarioContext`), `replay` (`RecordedGameAction`, `GameReplayService`), `observability` (`GameStateInspector`)
+- Exception `ReplaySequenceError` pour séquences de replay invalides ou non supportées
+- Documentation feature : `docs/features/08_scenarios_replay_and_observability.md` ; exemple `examples/replay_minimal_example.py`
+- Tests de non-régression sur scénarios et inspection d’historique
+
+### Tests
+
+- `tests/.../replay/`, `scenarios/`, `observability/`, `test_regression_fixtures.py`
+
 ## [0.7.0] - 2026-04-06
 
 ### Added
