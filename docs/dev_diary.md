@@ -23,7 +23,7 @@ Les entrées les plus récentes en premier.
 
 ### Note PR / merge
 
-- Branche `feature/06-combat-damage-and-sba` → PR vers `main` après contrôles au vert
+- Branche `feature/06-combat-damage-and-sba` → PR [#7](https://github.com/baobabgit/baobab-mtg-rules-engine/pull/7) squash-merge sur `main`
 
 ## 2026-04-06 — feature `05_casting_stack_and_resolution`
 
