@@ -5,6 +5,23 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format s’inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.8.1] - 2026-04-06
+
+### Changed
+
+- Métadonnées de publication : URLs du dépôt corrigées vers `github.com/baobabgit/baobab-mtg-rules-engine` (Homepage, Documentation, Repository, Issues, Changelog)
+- Classificateur de maturité : **Alpha** (remplace Pre-Alpha) ; ajout `License :: Other/Proprietary License`
+- Licence : fichier `LICENSE` propriétaire à la racine, référencé par `pyproject.toml` ; `MANIFEST.in` pour inclure `LICENSE` dans le sdist
+
+### Added
+
+- Workflow GitHub Actions `.github/workflows/ci.yml` (qualité sur Python 3.11 et 3.12, build wheel/sdist, artefacts `dist/`)
+- `docs/release_readiness.md` : prérequis, commandes de vérification, critères GO
+
+### Documentation
+
+- README : sections « Statut du projet », « Publication / build », licence renvoyant explicitement vers `LICENSE`
+
 ## [0.8.0] - 2026-04-05
 
 ### Added

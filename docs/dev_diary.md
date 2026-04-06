@@ -2,6 +2,18 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-06 — release readiness (publication)
+
+### Modifications
+
+- `LICENSE` propriétaire (all rights reserved) ; `MANIFEST.in` ; `pyproject.toml` : `license = { file = "LICENSE" }`, URLs `baobabgit/baobab-mtg-rules-engine`, classifiers Alpha + Proprietary, version **0.8.1**
+- `.github/workflows/ci.yml` : CI push/PR `main` (black, flake8, mypy, pylint, bandit, pytest+couverture, build + artefacts)
+- README : statut projet, publication/build, licence ; `docs/release_readiness.md` ; `CHANGELOG` **0.8.1**
+
+### Buts
+
+- Dépôt publiable et vérifiable automatiquement sans ambiguïté de licence ni d’URL
+
 ## 2026-04-05 — feature `08_scenarios_replay_and_observability`
 
 ### Modifications
