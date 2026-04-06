@@ -11,3 +11,6 @@ class TestEventType:
         names = {e.name for e in EventType}
         assert "GAME_INITIALIZED" in names
         assert "OBJECT_RELOCATED" in names
+        assert "SPELL_RESOLVED" in names
+        assert "SPELL_FIZZLED" in names
+        assert "PLAYER_DAMAGED" in names

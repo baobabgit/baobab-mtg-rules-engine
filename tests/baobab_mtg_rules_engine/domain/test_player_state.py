@@ -46,3 +46,17 @@ class TestPlayerState:
         player = PlayerState(0, name="Mana")
         with pytest.raises(InvalidGameStateError, match="mana"):
             player.add_floating_mana(0)
+
+    def test_apply_damage_reduces_life(self) -> None:
+        """Les dégâts réduisent les points de vie sans passer sous zéro."""
+        player = PlayerState(0, name="Dmg", life_total=10)
+        player.apply_damage(3)
+        assert player.life_total == 7
+        player.apply_damage(99)
+        assert player.life_total == 0
+
+    def test_apply_damage_negative_rejected(self) -> None:
+        """Les dégâts négatifs sont refusés."""
+        player = PlayerState(0, name="x", life_total=5)
+        with pytest.raises(InvalidGameStateError, match="dégâts"):
+            player.apply_damage(-1)

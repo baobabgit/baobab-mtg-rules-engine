@@ -172,7 +172,7 @@ class TestLegalActionServiceSorceryInstant:
         svc = LegalActionService()
         rules = _catalog_with_gameplay()
         legal = svc.compute_legal_actions(state, rules, 0)
-        assert CastSpellAction(sorcery_oid) not in legal
+        assert CastSpellAction(sorcery_oid, ()) not in legal
 
     def test_instant_allowed_when_stack_not_empty(self) -> None:
         """Un instant reste listé avec priorité même si la pile contient un sort."""
@@ -189,7 +189,7 @@ class TestLegalActionServiceSorceryInstant:
         svc = LegalActionService()
         rules = _catalog_with_gameplay()
         legal = svc.compute_legal_actions(state, rules, 0)
-        assert CastSpellAction(spell_oid) in legal
+        assert CastSpellAction(spell_oid, ()) in legal
 
     def test_sorcery_refused_for_non_active_even_with_priority(self) -> None:
         """Le NAP avec priorité ne voit pas les rituels de sa main en principale adverse."""
@@ -325,7 +325,7 @@ class TestLegalActionServiceApplyIntegration:
         svc = LegalActionService()
         rules = _catalog_with_gameplay()
         tm = TurnManager(state)
-        cast_action = CastSpellAction(spell_oid)
+        cast_action = CastSpellAction(spell_oid, ())
         svc.apply_action(state, rules, 0, cast_action, tm)
         assert state.players[0].floating_mana == 2
         assert len(state.stack_zone.object_ids()) == 1
@@ -451,7 +451,7 @@ class TestLegalActionServiceEdgeBranches:
         svc = LegalActionService()
         rules = _catalog_with_gameplay()
         tm = TurnManager(state)
-        cast_action = CastSpellAction(odd)
+        cast_action = CastSpellAction(odd, ())
         with patch.object(
             LegalActionService,
             "compute_legal_actions",

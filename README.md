@@ -141,6 +141,29 @@ if PassPriorityAction() in legal:
 
 Les comportements non modélisés doivent être signalés par les adaptateurs ou par `IllegalGameActionError`, sans mutation implicite.
 
+## Pile, lancement et résolution de sorts (périmètre simple)
+
+Les modules `baobab_mtg_rules_engine.casting`, `baobab_mtg_rules_engine.stack` et `baobab_mtg_rules_engine.targeting` couvrent un sous-ensemble **explicite** : coût mana entier générique, cibles « joueur » ou « créature au champ », pas de coûts alternatifs ni de modalités complexes.
+
+- **`SpellCastService.cast_spell`** : vérifie la carte en main, le timing, le mana flottant et les cibles ; paie le coût ; place un `SpellOnStack` sur la pile et attache un `StackObject` consultable via `GameState.get_stack_object_view`.
+- **`StackResolutionService.resolve_top`** : retire le **dernier** objet empilé (LIFO) ; si les cibles ne sont plus légales, le sort **fizzle** (défausse, `SPELL_FIZZLED`) ; sinon effet minimal selon le catalogue (créature → permanent sur le champ du contrôleur, sort de dégâts joueur → `apply_damage` puis défausse).
+- **`TargetValidator`** : import direct depuis `baobab_mtg_rules_engine.targeting.target_validator` si besoin (le paquet `targeting` n’exporte que `SimpleTarget` pour éviter les imports circulaires).
+
+```python
+from baobab_mtg_rules_engine.casting.spell_cast_service import SpellCastService
+from baobab_mtg_rules_engine.stack.stack_resolution_service import StackResolutionService
+
+# rules : InMemoryCardCatalogAdapter avec clés rituel / instant, coûts et spell_target_kind
+stack_id = SpellCastService().cast_spell(
+    state,
+    rules,
+    caster_player_index=0,
+    spell_hand_object_id=hand_card_id,
+    targets=(),
+)
+StackResolutionService().resolve_top(state, rules)
+```
+
 ## Vérification qualité (pipeline local)
 
 Après `pip install -e ".[dev]"`, exécuter dans l’ordre :

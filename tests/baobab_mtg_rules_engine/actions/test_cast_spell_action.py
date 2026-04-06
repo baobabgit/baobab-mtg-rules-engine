@@ -9,7 +9,10 @@ class TestCastSpellAction:
     """Tri par identifiant de carte en main."""
 
     def test_kind_and_sort_key(self) -> None:
-        """Le tri suit l'identifiant du sort en main."""
+        """Le tri suit l'identifiant du sort en main puis les cibles."""
         cast = CastSpellAction(GameObjectId(3))
         assert cast.kind is SupportedActionKind.CAST_SPELL
-        assert cast.sort_key() == (SupportedActionKind.CAST_SPELL.value, 3)
+        sk = cast.sort_key()
+        assert sk[0] == SupportedActionKind.CAST_SPELL.value
+        assert sk[1] == 3
+        assert not sk[2]

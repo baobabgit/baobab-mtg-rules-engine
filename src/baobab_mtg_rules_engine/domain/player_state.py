@@ -73,6 +73,17 @@ class PlayerState:
         """Remet le mana résiduel à zéro (étape de nettoyage)."""
         self._floating_mana = 0
 
+    def apply_damage(self, amount: int) -> None:
+        """Inflige des dégâts au joueur (points de vie, modèle simplifié).
+
+        :param amount: Quantité positive ou nulle.
+        :raises InvalidGameStateError: si le montant est négatif.
+        """
+        if amount < 0:
+            msg = "Les dégâts infligés ne peuvent pas être négatifs."
+            raise InvalidGameStateError(msg, field_name="amount")
+        self._life_total = max(0, self._life_total - amount)
+
     def spend_floating_mana(self, amount: int) -> None:
         """Dépense du mana flottant.
 

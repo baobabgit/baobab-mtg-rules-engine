@@ -5,6 +5,21 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format s’inspire de [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
 et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
+## [0.6.0] - 2026-04-06
+
+### Added
+
+- `StackObject` : vue métier d’un sort sur la pile (contrôleur, clé catalogue, cibles) ; `GameState` conserve des vues par identifiant d’objet pile
+- `SpellCastService` : validation timing (rituel / créature / éphémère), coût mana générique, cibles via `TargetValidator`, migration main → pile avec `SpellOnStack`
+- `StackResolutionService` : résolution LIFO du sommet, fizzle si toutes les cibles deviennent illégales, effets simples (créature → champ de bataille, dégâts joueur, défausse)
+- `TargetValidator` et `SimpleTarget` : ciblage joueur / créature au lancement et revalidation à la résolution ; `InvalidSpellTargetError`
+- `LegalActionService` : énumération des `CastSpellAction` avec cibles, application via `SpellCastService` ; événements `SPELL_RESOLVED`, `SPELL_FIZZLED`, `PLAYER_DAMAGED`
+- Extension de `CardGameplayPort` / `InMemoryCardCatalogAdapter` (sort créature, type de cible, dégâts joueur) ; `BaobabMtgCatalogAdapter` refuse ces extensions jusqu’à branchement catalogue
+
+### Tests
+
+- `tests/.../casting/`, `stack/`, `targeting/` ; helpers partagés `cast_spell_test_helpers.py`
+
 ## [0.5.0] - 2026-04-05
 
 ### Added

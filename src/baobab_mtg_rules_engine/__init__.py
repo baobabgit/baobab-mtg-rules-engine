@@ -10,6 +10,7 @@ from baobab_mtg_rules_engine.exceptions import (
     BaobabMtgRulesEngineException,
     IllegalGameActionError,
     InvalidGameStateError,
+    InvalidSpellTargetError,
     UnsupportedRuleException,
     ValidationException,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "BaobabMtgRulesEngineException",
     "IllegalGameActionError",
     "InvalidGameStateError",
+    "InvalidSpellTargetError",
     "UnsupportedRuleException",
     "ValidationException",
 ]
