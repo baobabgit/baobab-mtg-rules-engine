@@ -22,7 +22,7 @@ Les entrées les plus récentes en premier.
 
 ### Note PR / merge
 
-- Branche `feature/08-scenarios-replay-and-observability` → PR vers `main` après CI locale au vert
+- Branche `feature/08-scenarios-replay-and-observability` → PR [#8](https://github.com/baobabgit/baobab-mtg-rules-engine/pull/8) squash-merge sur `main` (commit `296b039`)
 
 ## 2026-04-06 — feature `06_combat_damage_and_sba`
 
