@@ -7,6 +7,7 @@ from typing import Any
 
 from baobab_mtg_rules_engine.catalog.card_definition_port import CardDefinitionPort
 from baobab_mtg_rules_engine.catalog.card_gameplay_port import CardGameplayPort
+from baobab_mtg_rules_engine.domain.triggered_ability_definition import TriggeredAbilityDefinition
 from baobab_mtg_rules_engine.exceptions.unsupported_rule_exception import UnsupportedRuleException
 
 
@@ -102,6 +103,14 @@ class BaobabMtgCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
 
     def creature_toughness(self, catalog_key: str) -> int:
+        _ = catalog_key
+        msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
+        raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")
+
+    def triggered_ability_definitions(
+        self,
+        catalog_key: str,
+    ) -> tuple[TriggeredAbilityDefinition, ...]:
         _ = catalog_key
         msg = "Les métadonnées CardGameplayPort ne sont pas encore exposées par baobab-mtg-catalog."
         raise UnsupportedRuleException(msg, rule_reference="catalog-gameplay")

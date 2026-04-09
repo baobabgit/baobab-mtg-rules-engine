@@ -16,6 +16,11 @@ class TestEventType:
         assert "PLAYER_DAMAGED" in names
         assert "COMBAT_DAMAGE_ASSIGNED" in names
         assert "CREATURE_DESTROYED" in names
+        assert "TRIGGER_DETECTED" in names
+        assert "TRIGGER_QUEUED" in names
+        assert "TRIGGER_STACKED" in names
+        assert "TRIGGER_RESOLVED" in names
+        assert "TRIGGER_FIZZLED" in names
         assert "PLAYER_DEFEATED" in names
         assert "GAME_VICTORY_ASSIGNED" in names
         assert "GAME_DRAW" in names

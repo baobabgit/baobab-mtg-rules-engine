@@ -14,9 +14,14 @@ from baobab_mtg_rules_engine.domain.in_game_card import InGameCard
 from baobab_mtg_rules_engine.domain.permanent import Permanent
 from baobab_mtg_rules_engine.domain.phase import Phase
 from baobab_mtg_rules_engine.domain.player_state import PLAYER_OWNED_ZONE_TYPES, PlayerState
+from baobab_mtg_rules_engine.domain.pending_triggered_ability import PendingTriggeredAbility
 from baobab_mtg_rules_engine.domain.spell_on_stack import SpellOnStack
 from baobab_mtg_rules_engine.domain.step import Step
 from baobab_mtg_rules_engine.domain.turn_state import TurnState
+from baobab_mtg_rules_engine.domain.triggered_ability_definition import TriggeredAbilityDefinition
+from baobab_mtg_rules_engine.domain.triggered_ability_stack_object import (
+    TriggeredAbilityStackObject,
+)
 from baobab_mtg_rules_engine.domain.zone import Zone
 from baobab_mtg_rules_engine.domain.zone_location import ZoneLocation
 from baobab_mtg_rules_engine.domain.zone_type import ZoneType
@@ -34,11 +39,14 @@ __all__ = [
     "GameObjectId",
     "GameState",
     "InGameCard",
+    "PendingTriggeredAbility",
     "Permanent",
     "Phase",
     "PlayerState",
     "SpellOnStack",
     "Step",
+    "TriggeredAbilityDefinition",
+    "TriggeredAbilityStackObject",
     "TurnState",
     "Zone",
     "ZoneLocation",

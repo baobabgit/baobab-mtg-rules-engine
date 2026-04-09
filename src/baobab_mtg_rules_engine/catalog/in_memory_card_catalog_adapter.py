@@ -2,9 +2,12 @@
 
 from baobab_mtg_rules_engine.catalog.card_definition_port import CardDefinitionPort
 from baobab_mtg_rules_engine.catalog.card_gameplay_port import CardGameplayPort
+from baobab_mtg_rules_engine.domain.triggered_ability_definition import TriggeredAbilityDefinition
 
 
-class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
+class InMemoryCardCatalogAdapter(  # pylint: disable=too-many-instance-attributes
+    CardDefinitionPort, CardGameplayPort
+):
     """Catalogue minimal : decks, types de carte et coûts pour le moteur légal."""
 
     def __init__(  # pylint: disable=too-many-arguments
@@ -22,6 +25,7 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         creature_spell_keys: frozenset[str] | None = None,
         spell_damage_to_player_by_key: dict[str, int] | None = None,
         creature_power_toughness_by_key: dict[str, tuple[int, int]] | None = None,
+        triggered_abilities_by_key: dict[str, tuple[TriggeredAbilityDefinition, ...]] | None = None,
     ) -> None:
         self._supported: frozenset[str] = supported_keys
         self._unlimited: frozenset[str] = unlimited_copy_keys or frozenset()
@@ -37,6 +41,9 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         self._creature_spells: frozenset[str] = creature_spell_keys or frozenset()
         self._spell_damage_player: dict[str, int] = dict(spell_damage_to_player_by_key or {})
         self._creature_pt: dict[str, tuple[int, int]] = dict(creature_power_toughness_by_key or {})
+        self._triggered_abilities: dict[str, tuple[TriggeredAbilityDefinition, ...]] = dict(
+            triggered_abilities_by_key or {},
+        )
 
     def is_supported_catalog_key(self, catalog_key: str) -> bool:
         """:return: Appartenance à l'ensemble supporté."""
@@ -95,3 +102,10 @@ class InMemoryCardCatalogAdapter(CardDefinitionPort, CardGameplayPort):
         if pt is None:
             return 0
         return int(pt[1])
+
+    def triggered_ability_definitions(
+        self,
+        catalog_key: str,
+    ) -> tuple[TriggeredAbilityDefinition, ...]:
+        """:return: Déclenchements associés à la clé."""
+        return tuple(self._triggered_abilities.get(catalog_key, ()))

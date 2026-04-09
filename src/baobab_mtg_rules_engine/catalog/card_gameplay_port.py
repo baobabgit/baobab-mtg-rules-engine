@@ -5,6 +5,8 @@
 
 from typing import Protocol, runtime_checkable
 
+from baobab_mtg_rules_engine.domain.triggered_ability_definition import TriggeredAbilityDefinition
+
 
 @runtime_checkable
 class CardGameplayPort(Protocol):
@@ -56,4 +58,11 @@ class CardGameplayPort(Protocol):
 
     def creature_toughness(self, catalog_key: str) -> int:
         """:return: Endurance pour une créature catalogue ; ``0`` si inconnu."""
+        ...
+
+    def triggered_ability_definitions(
+        self,
+        catalog_key: str,
+    ) -> tuple[TriggeredAbilityDefinition, ...]:
+        """:return: Capacités déclenchées supportées pour cette clé, ou vide."""
         ...

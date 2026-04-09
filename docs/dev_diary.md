@@ -2,6 +2,31 @@
 
 Les entrées les plus récentes en premier.
 
+## 2026-04-09 — feature `09_triggered_abilities_core`
+
+### Modifications
+
+- `domain/` : ajout de `TriggeredAbilityDefinition`, `PendingTriggeredAbility`, `TriggeredAbilityStackObject`
+- `GameState` : file de triggers en attente, vues de capacités déclenchées sur la pile, séquence de scan d’événements, compteurs de passes non pile-vide
+- `EventType` : événements `TRIGGER_DETECTED`, `TRIGGER_QUEUED`, `TRIGGER_STACKED`, `TRIGGER_RESOLVED`, `TRIGGER_FIZZLED`
+- `catalog/` : extension de `CardGameplayPort` avec `triggered_ability_definitions` ; support mémoire via `InMemoryCardCatalogAdapter` ; refus explicite côté `BaobabMtgCatalogAdapter`
+- `engine/trigger_detection_service.py` : détection déclenchée sur journal (ETB, dies, cast, begin step, draw, combat damage to player)
+- `stack/triggered_ability_resolution_service.py` : résolution/fizzle des capacités déclenchées simples (damage opponent/player, destroy target creature, draw cards)
+- `TurnManager` : intégration du pipeline complet détecté → file → empilé au bon moment (après SBA, avant ré-attribution de priorité), APNAP duel déterministe, résolution de pile unifiée sort/capacité
+- `PriorityManager` : mode duel supportant fermeture de fenêtre à pile non vide (résolution par deux passes)
+- tests : nouvelles suites `test_triggered_ability_flow.py`, `test_trigger_detection_service.py`, `test_triggered_ability_resolution_service.py` + extensions catalog/priority/event types
+- documentation : README enrichi (section « Capacités déclenchées (feature 09) »)
+
+### Buts
+
+- Fournir un noyau réel de capacités déclenchées simples, déterministe et traçable
+- Respecter l’ordre d’empilement APNAP en duel et le timing moteur (pas d’empilement pendant résolution d’un autre objet)
+
+### Impact
+
+- Les consommateurs peuvent désormais injecter des capacités déclenchées via le catalogue mémoire
+- Le journal moteur expose explicitement le cycle trigger (détection, queue, stack, résolution/fizzle)
+
 ## 2026-04-06 — CI sur tags + release GitHub (v1.0.0)
 
 ### Modifications

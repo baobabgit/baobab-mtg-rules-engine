@@ -9,10 +9,14 @@ from baobab_mtg_rules_engine.domain.game_event import GameEvent
 from baobab_mtg_rules_engine.domain.game_object import GameObject
 from baobab_mtg_rules_engine.domain.game_object_id import GameObjectId
 from baobab_mtg_rules_engine.domain.in_game_card import InGameCard
+from baobab_mtg_rules_engine.domain.pending_triggered_ability import PendingTriggeredAbility
 from baobab_mtg_rules_engine.domain.permanent import Permanent
 from baobab_mtg_rules_engine.domain.player_state import PLAYER_OWNED_ZONE_TYPES, PlayerState
 from baobab_mtg_rules_engine.domain.spell_on_stack import SpellOnStack
 from baobab_mtg_rules_engine.domain.turn_state import TurnState
+from baobab_mtg_rules_engine.domain.triggered_ability_stack_object import (
+    TriggeredAbilityStackObject,
+)
 from baobab_mtg_rules_engine.domain.zone import Zone
 from baobab_mtg_rules_engine.domain.zone_location import ZoneLocation
 from baobab_mtg_rules_engine.domain.zone_type import ZoneType
@@ -49,10 +53,15 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
         self._duel_first_player_index: int = 0
         self._priority_player_index: int = self._turn.active_player_index
         self._consecutive_empty_stack_passes: int = 0
+        self._consecutive_non_empty_stack_passes: int = 0
         self._lands_played_this_turn: int = 0
         self._declared_attackers: list[GameObjectId] = []
         self._declared_blocks: list[tuple[GameObjectId, GameObjectId]] = []
         self._stack_object_views: dict[GameObjectId, StackObject] = {}
+        self._triggered_ability_views: dict[GameObjectId, TriggeredAbilityStackObject] = {}
+        self._pending_triggers: list[PendingTriggeredAbility] = []
+        self._next_pending_trigger_id: int = 1
+        self._trigger_scan_sequence: int = 0
         self._winner_player_index: int | None = None
         self._is_draw: bool = False
 
@@ -120,6 +129,11 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
     def consecutive_empty_stack_passes(self) -> int:
         """:return: Passes consécutives à pile vide dans l'étape courante."""
         return self._consecutive_empty_stack_passes
+
+    @property
+    def consecutive_non_empty_stack_passes(self) -> int:
+        """:return: Passes consécutives avec pile non vide dans la fenêtre courante."""
+        return self._consecutive_non_empty_stack_passes
 
     @property
     def lands_played_this_turn(self) -> int:
@@ -240,6 +254,83 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
     def stack_object_views(self) -> tuple[StackObject, ...]:
         """:return: Copie immuable des vues de pile (ordre non garanti)."""
         return tuple(self._stack_object_views.values())
+
+    @property
+    def triggered_ability_stack_views(self) -> tuple[TriggeredAbilityStackObject, ...]:
+        """:return: Vues de capacités déclenchées présentes sur la pile."""
+        return tuple(self._triggered_ability_views.values())
+
+    @property
+    def pending_triggers(self) -> tuple[PendingTriggeredAbility, ...]:
+        """:return: Copie immuable de la file de triggers détectés mais non empilés."""
+        return tuple(self._pending_triggers)
+
+    def issue_pending_trigger_id(self) -> int:
+        """:return: Identifiant monotone d'entrée de trigger en attente."""
+        pending_id = self._next_pending_trigger_id
+        self._next_pending_trigger_id += 1
+        return pending_id
+
+    @property
+    def trigger_scan_sequence(self) -> int:
+        """:return: Dernier numéro de séquence d'événement déjà scanné pour les triggers."""
+        return self._trigger_scan_sequence
+
+    def mark_trigger_scan_sequence(self, sequence: int) -> None:
+        """Mémorise le dernier événement analysé par le détecteur de triggers."""
+        if sequence < 0:
+            msg = "La séquence de scan de triggers ne peut pas être négative."
+            raise InvalidGameStateError(msg, field_name="sequence")
+        self._trigger_scan_sequence = sequence
+
+    def queue_pending_trigger(self, pending_trigger: PendingTriggeredAbility) -> None:
+        """Ajoute un trigger à la file d'attente en conservant l'ordre d'insertion."""
+        self._pending_triggers.append(pending_trigger)
+
+    def pop_all_pending_triggers(self) -> tuple[PendingTriggeredAbility, ...]:
+        """Vide la file des triggers en attente et retourne son contenu ordonné."""
+        queued = tuple(self._pending_triggers)
+        self._pending_triggers.clear()
+        return queued
+
+    def attach_triggered_ability_view(
+        self,
+        ability_stack_object_id: GameObjectId,
+        view: TriggeredAbilityStackObject,
+    ) -> None:
+        """Associe une vue de capacité déclenchée à un objet ``AbilityOnStack``."""
+        if ability_stack_object_id in self._triggered_ability_views:
+            msg = "Une vue de capacité déclenchée existe déjà pour cet identifiant."
+            raise InvalidGameStateError(msg, field_name="ability_stack_object_id")
+        self._triggered_ability_views[ability_stack_object_id] = view
+
+    def detach_triggered_ability_view(
+        self,
+        ability_stack_object_id: GameObjectId,
+    ) -> TriggeredAbilityStackObject | None:
+        """Retire la vue de capacité déclenchée associée ; retourne la vue si présente."""
+        return self._triggered_ability_views.pop(ability_stack_object_id, None)
+
+    def get_triggered_ability_view(
+        self,
+        ability_stack_object_id: GameObjectId,
+    ) -> TriggeredAbilityStackObject | None:
+        """:return: Vue déclenchée associée à un objet de pile, ou ``None``."""
+        return self._triggered_ability_views.get(ability_stack_object_id)
+
+    def remove_object_from_stack(self, object_id: GameObjectId) -> None:
+        """Retire un objet de la pile et du registre (usage : capacités sur la pile).
+
+        :raises InvalidGameStateError: si l'objet n'est pas présent sur la pile.
+        """
+        loc = self.find_location(object_id)
+        if loc.zone_type is not ZoneType.STACK:
+            msg = "L'objet à retirer doit être présent sur la pile."
+            raise InvalidGameStateError(msg, field_name="object_id")
+        self._stack.remove(object_id)
+        self.detach_stack_object_view(object_id)
+        self.detach_triggered_ability_view(object_id)
+        self._objects.pop(object_id, None)
 
     def apply_play_land(self, player_index: int, land_object_id: GameObjectId) -> None:
         """Joue un terrain depuis la main vers le champ (identité conservée, modèle simplifié).
@@ -429,6 +520,15 @@ class GameState:  # pylint: disable=too-many-public-methods,too-many-instance-at
         """Incrémente les passes à pile vide ; retourne la nouvelle valeur."""
         self._consecutive_empty_stack_passes += 1
         return self._consecutive_empty_stack_passes
+
+    def turn_engine_reset_non_empty_stack_passes(self) -> None:
+        """Remet à zéro le compteur de passes consécutives lorsque la pile n'est pas vide."""
+        self._consecutive_non_empty_stack_passes = 0
+
+    def turn_engine_increment_non_empty_stack_passes(self) -> int:
+        """Incrémente les passes consécutives à pile non vide ; retourne la nouvelle valeur."""
+        self._consecutive_non_empty_stack_passes += 1
+        return self._consecutive_non_empty_stack_passes
 
     def record_engine_event(
         self,

@@ -93,3 +93,5 @@ class TestBaobabMtgCatalogAdapter:
             adapter.creature_power("x")
         with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
             adapter.creature_toughness("x")
+        with pytest.raises(UnsupportedRuleException, match="CardGameplayPort"):
+            adapter.triggered_ability_definitions("x")

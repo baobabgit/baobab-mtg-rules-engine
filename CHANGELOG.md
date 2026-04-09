@@ -11,6 +11,30 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 - CI GitHub Actions : déclenchement **uniquement** sur push de tag `v*.*.*` dont le commit est sur `main` ; après contrôle qualité, **création d’une GitHub Release** avec wheel et sdist en pièces jointes
 
+## [1.1.0] - 2026-04-09
+
+### Added
+
+- Noyau des **capacités déclenchées simples** (feature 09) :
+  - modèle `TriggeredAbilityDefinition`, `PendingTriggeredAbility`, `TriggeredAbilityStackObject`
+  - extension `CardGameplayPort.triggered_ability_definitions` + support `InMemoryCardCatalogAdapter`
+  - détection événementielle (`TriggerDetectionService`) sur `etb_self`, `dies_self`, `cast_self`, `begin_step`, `draw_you`, `combat_damage_to_player_self`
+  - file d’attente explicite des triggers dans `GameState` (scan incrémental, ids monotones)
+  - empilement via `AbilityOnStack` avant priorité avec ordre APNAP duel déterministe
+  - résolution dédiée (`TriggeredAbilityResolutionService`) avec événements `TRIGGER_RESOLVED` / `TRIGGER_FIZZLED` et validation de cibles à la résolution
+- Nouveaux événements de journal : `TRIGGER_DETECTED`, `TRIGGER_QUEUED`, `TRIGGER_STACKED`, `TRIGGER_RESOLVED`, `TRIGGER_FIZZLED`
+
+### Changed
+
+- `PriorityManager` : support du mode « fenêtre pile non vide » configurable (résolution après deux passes quand activé)
+- `TurnManager` : orchestration complète SBA/triggers/pile/priorité pour intégrer les capacités déclenchées sans résolution intempestive
+- `BaobabMtgCatalogAdapter` : refus explicite de la nouvelle surface `triggered_ability_definitions` tant que non branchée côté catalogue distant
+
+### Tests
+
+- Ajout de non-régressions d’intégration : triggers sur cast, ETB, dies, upkeep (APNAP) et fizzle de cible illégale
+- Ajout de tests unitaires dédiés pour la détection de triggers et la résolution des capacités déclenchées
+
 ## [0.8.1] - 2026-04-06
 
 ### Changed

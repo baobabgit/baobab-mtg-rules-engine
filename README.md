@@ -175,6 +175,63 @@ stack_id = SpellCastService().cast_spell(
 StackResolutionService().resolve_top(state, rules)
 ```
 
+## Capacités déclenchées (noyau feature 09)
+
+Le moteur supporte désormais un cycle explicite **détection → file d'attente → pile → résolution** pour des capacités déclenchées simples, avec ordre déterministe en duel.
+
+- **Détection d'événements** (`TriggerDetectionService`) : scan du journal `GameState.events` et déclenchement sur les événements supportés :
+  - `etb_self` (entrée sur le champ),
+  - `dies_self` (champ → cimetière),
+  - `cast_self` (événement `SPELL_CAST`),
+  - `begin_step` (début d'étape, scope `you` ou `any`),
+  - `draw_you` (`TURN_DRAW_PERFORMED`),
+  - `combat_damage_to_player_self` (`COMBAT_DAMAGE_ASSIGNED` ciblant un joueur).
+- **File d'attente** : chaque trigger détecté est matérialisé en `PendingTriggeredAbility` dans `GameState.pending_triggers`, avec événements `TRIGGER_DETECTED` puis `TRIGGER_QUEUED`.
+- **Mise sur la pile au bon moment** (`TurnManager`) :
+  - après vérification SBA/résolution si nécessaire,
+  - avant attribution/re-attribution de priorité,
+  - sans interrompre la résolution en cours.
+  Les entrées sont empilées en ordre APNAP simplifié duel (joueur actif d'abord, puis non-actif, ordre déterministe intra-contrôleur).
+- **Objet de pile dédié** : `AbilityOnStack` + vue `TriggeredAbilityStackObject` (contrôleur, source, définition, cibles implicites simples).
+- **Résolution** (`TriggeredAbilityResolutionService`) :
+  - effets supportés : `damage_opponent`, `damage_player`, `destroy_target_creature`, `draw_cards`,
+  - validation de cible à la résolution (si cible devenue illégale, `TRIGGER_FIZZLED`),
+  - sinon `TRIGGER_RESOLVED`.
+
+Exemple minimal (trigger d'entretien) :
+
+```python
+from baobab_mtg_rules_engine.catalog import InMemoryCardCatalogAdapter
+from baobab_mtg_rules_engine.domain import TriggeredAbilityDefinition, TurnState
+from baobab_mtg_rules_engine.domain.step import Step
+from baobab_mtg_rules_engine.engine import TurnManager
+
+rules = InMemoryCardCatalogAdapter(
+    frozenset({"upkeep-mage"}),
+    creature_keys=frozenset({"upkeep-mage"}),
+    triggered_abilities_by_key={
+        "upkeep-mage": (
+            TriggeredAbilityDefinition(
+                ability_key="upkeep_ping",
+                trigger_kind="begin_step",
+                trigger_step="UPKEEP",
+                trigger_step_scope="you",
+                effect_kind="damage_opponent",
+                amount=1,
+            ),
+        ),
+    },
+    creature_power_toughness_by_key={"upkeep-mage": (1, 1)},
+)
+
+# state : permanent "upkeep-mage" déjà en jeu pour le joueur actif
+state.replace_turn_state(TurnState(0, 2, Step.UPKEEP))
+tm = TurnManager(state, rules=rules)
+tm.open_current_step()  # détecte et empile le trigger avant la priorité
+tm.pass_priority()
+tm.pass_priority()      # résolution du trigger
+```
+
 ## Combat simplifié, ABS et fin de partie
 
 Le paquet `baobab_mtg_rules_engine.combat` et `StateBasedActionService` couvrent un **duel minimal** : pas de piétinement, pas de plusieurs bloqueurs sur le même attaquant, pas de prévention / remplacement avancés.

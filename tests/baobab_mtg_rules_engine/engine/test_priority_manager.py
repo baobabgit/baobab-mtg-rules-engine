@@ -47,3 +47,18 @@ class TestPriorityManager:
         assert mgr.process_priority_pass() is False
         assert state.priority_player_index == 1
         assert state.consecutive_empty_stack_passes == 0
+
+    def test_nonempty_stack_can_close_window_when_enabled(self) -> None:
+        """Mode résolution de pile : deux passes à pile non vide ferment la fenêtre."""
+        state = GameState.new_two_player()
+        state.replace_turn_state(TurnState(0, 1, Step.UPKEEP))
+        mgr = PriorityManager(state, close_non_empty_window=True)
+        mgr.assign_to_active_player()
+        oid = state.issue_object_id()
+        state.register_object_at(
+            SpellOnStack(oid, CardReference("x")),
+            ZoneLocation(None, ZoneType.STACK),
+        )
+        assert mgr.process_priority_pass() is False
+        assert state.priority_player_index == 1
+        assert mgr.process_priority_pass() is True

@@ -4,10 +4,20 @@ from __future__ import annotations
 
 from baobab_mtg_rules_engine.catalog.card_gameplay_port import CardGameplayPort
 from baobab_mtg_rules_engine.combat.combat_service import CombatService
+from baobab_mtg_rules_engine.domain.ability_on_stack import AbilityOnStack
 from baobab_mtg_rules_engine.domain.event_type import EventType
+from baobab_mtg_rules_engine.domain.game_object_id import GameObjectId
 from baobab_mtg_rules_engine.domain.game_state import GameState
+from baobab_mtg_rules_engine.domain.pending_triggered_ability import PendingTriggeredAbility
+from baobab_mtg_rules_engine.domain.permanent import Permanent
 from baobab_mtg_rules_engine.domain.step import Step
 from baobab_mtg_rules_engine.domain.turn_state import TurnState
+from baobab_mtg_rules_engine.domain.triggered_ability_stack_object import (
+    TriggeredAbilityStackObject,
+)
+from baobab_mtg_rules_engine.domain.zone_location import ZoneLocation
+from baobab_mtg_rules_engine.domain.zone_type import ZoneType
+from baobab_mtg_rules_engine.engine.trigger_detection_service import TriggerDetectionService
 from baobab_mtg_rules_engine.engine.state_based_action_service import StateBasedActionService
 from baobab_mtg_rules_engine.exceptions.insufficient_library_error import InsufficientLibraryError
 from baobab_mtg_rules_engine.exceptions.invalid_game_state_error import InvalidGameStateError
@@ -17,6 +27,11 @@ from baobab_mtg_rules_engine.engine.null_priority_action_legality_port import (
 from baobab_mtg_rules_engine.engine.priority_action_legality_port import PriorityActionLegalityPort
 from baobab_mtg_rules_engine.engine.priority_manager import PriorityManager
 from baobab_mtg_rules_engine.engine.step_transition_service import StepTransitionService
+from baobab_mtg_rules_engine.stack.stack_resolution_service import StackResolutionService
+from baobab_mtg_rules_engine.stack.triggered_ability_resolution_service import (
+    TriggeredAbilityResolutionService,
+)
+from baobab_mtg_rules_engine.targeting.simple_target import SimpleTarget
 
 
 class TurnManager:
@@ -40,10 +55,20 @@ class TurnManager:
         self._state: GameState = state
         self._legality: PriorityActionLegalityPort = legality or NullPriorityActionLegalityPort()
         self._rules: CardGameplayPort | None = rules
-        self._priority: PriorityManager = PriorityManager(state)
+        self._priority: PriorityManager = PriorityManager(
+            state,
+            close_non_empty_window=rules is not None,
+        )
         self._steps: StepTransitionService = StepTransitionService()
+        self._trigger_detection: TriggerDetectionService = TriggerDetectionService()
+        self._spell_resolution: StackResolutionService = StackResolutionService()
+        self._trigger_resolution: TriggeredAbilityResolutionService = (
+            TriggeredAbilityResolutionService()
+        )
+        if self._rules is not None and self._state.events:
+            self._state.mark_trigger_scan_sequence(self._state.events[-1].sequence)
 
-    def open_current_step(self) -> None:
+    def open_current_step(self) -> None:  # pylint: disable=too-many-return-statements
         """Applique les effets d'entrée de l'étape courante et prépare la priorité si besoin."""
         step = self._state.turn_state.step
         if step is Step.BEGIN_COMBAT:
@@ -53,11 +78,16 @@ class TurnManager:
             if self._rules is not None:
                 CombatService().resolve_combat_damage_step(self._state, self._rules)
                 StateBasedActionService().apply_all(self._state, self._rules)
+                self._detect_and_queue_triggers_from_new_events()
+                if self._stack_pending_triggers_if_any():
+                    return
             self._priority.assign_to_active_player()
             self._emit_priority_assigned()
             return
         if step is Step.UNTAP:
             self._emit_step_entered()
+            if self._rules is not None:
+                self._detect_and_queue_triggers_from_new_events()
             self._replace_step_only(Step.UPKEEP)
             self.open_current_step()
             return
@@ -71,15 +101,27 @@ class TurnManager:
         if step is Step.DRAW:
             self._emit_step_entered()
             self._resolve_draw_step()
+            if self._rules is not None:
+                self._detect_and_queue_triggers_from_new_events()
+                if self._stack_pending_triggers_if_any():
+                    return
             self._priority.assign_to_active_player()
             self._emit_priority_assigned()
             return
         self._emit_step_entered()
+        if self._rules is not None:
+            self._detect_and_queue_triggers_from_new_events()
+            if self._stack_pending_triggers_if_any():
+                return
         self._priority.assign_to_active_player()
         self._emit_priority_assigned()
 
     def pass_priority(self) -> None:
         """Enregistre une passe du joueur qui détient actuellement la priorité."""
+        if self._rules is not None:
+            self._detect_and_queue_triggers_from_new_events()
+            if self._stack_pending_triggers_if_any():
+                return
         passer = self._state.priority_player_index
         self._legality.assert_legal_priority_window(self._state, passer)
         should_advance = self._priority.process_priority_pass()
@@ -87,6 +129,14 @@ class TurnManager:
             EventType.PRIORITY_PASSED,
             (("player_index", passer),),
         )
+        if (
+            should_advance
+            and self._rules is not None
+            and len(self._state.stack_zone.object_ids()) > 0
+        ):
+            self._resolve_top_stack_object()
+            self._run_sba_and_triggers_loop()
+            return
         if should_advance:
             self._advance_step_after_priority_window()
 
@@ -188,3 +238,109 @@ class TurnManager:
                     EventType.FLOATING_MANA_CLEARED,
                     (("player_index", idx),),
                 )
+
+    def _detect_and_queue_triggers_from_new_events(self) -> None:
+        if self._rules is None:
+            return
+        last_scanned = self._state.trigger_scan_sequence
+        latest = self._trigger_detection.scan_new_events(
+            self._state,
+            self._rules,
+            from_sequence_exclusive=last_scanned,
+        )
+        self._state.mark_trigger_scan_sequence(latest)
+
+    def _stack_pending_triggers_if_any(self) -> bool:
+        if len(self._state.pending_triggers) == 0:
+            return False
+        queued = self._state.pop_all_pending_triggers()
+        active = self._state.turn_state.active_player_index
+        ordered = sorted(
+            queued,
+            key=lambda p: (
+                0 if p.controller_player_index == active else 1,
+                p.controller_player_index,
+                p.pending_trigger_id,
+            ),
+        )
+        for pending in ordered:
+            ability_object_id = self._state.issue_object_id()
+            ability = AbilityOnStack(
+                ability_object_id,
+                source_object_id=pending.source_object_id,
+                ability_key=pending.ability_definition.ability_key,
+            )
+            self._state.register_object_at(ability, ZoneLocation(None, ZoneType.STACK))
+            targets = self._default_trigger_targets(pending)
+            view = TriggeredAbilityStackObject(
+                ability_object_id=ability_object_id,
+                pending_trigger_id=pending.pending_trigger_id,
+                controller_player_index=pending.controller_player_index,
+                source_object_id=pending.source_object_id,
+                source_catalog_key=pending.source_catalog_key,
+                ability_definition=pending.ability_definition,
+                targets=targets,
+            )
+            self._state.attach_triggered_ability_view(ability_object_id, view)
+            self._state.record_engine_event(
+                EventType.TRIGGER_STACKED,
+                (
+                    ("pending_trigger_id", pending.pending_trigger_id),
+                    ("stack_object_id", ability_object_id.value),
+                    ("controller_player_index", pending.controller_player_index),
+                    ("ability_key", pending.ability_definition.ability_key),
+                ),
+            )
+        self._priority.assign_to_active_player()
+        self._emit_priority_assigned()
+        return True
+
+    def _default_trigger_targets(
+        self,
+        pending: PendingTriggeredAbility,
+    ) -> tuple[SimpleTarget, ...]:
+        p = pending
+        target_kind = p.ability_definition.target_kind
+        if target_kind == "none":
+            return ()
+        if target_kind == "player":
+            return (SimpleTarget.for_player(1 - p.controller_player_index),)
+        if target_kind == "creature":
+            creature_ids: list[int] = []
+            for player in self._state.players:
+                for oid in player.zone(ZoneType.BATTLEFIELD).object_ids():
+                    obj = self._state.get_object(oid)
+                    if not isinstance(obj, Permanent):
+                        continue
+                    if self._rules is None:
+                        continue
+                    catalog_key = obj.card_reference.catalog_key
+                    if self._rules.is_creature_catalog_key(catalog_key):
+                        creature_ids.append(oid.value)
+            creature_ids.sort()
+            if creature_ids:
+                return (SimpleTarget.for_permanent(GameObjectId(creature_ids[0])),)
+            return ()
+        return ()
+
+    def _resolve_top_stack_object(self) -> None:
+        if self._rules is None:
+            return
+        stack_ids = self._state.stack_zone.object_ids()
+        if not stack_ids:
+            return
+        top_id = stack_ids[-1]
+        if self._state.get_triggered_ability_view(top_id) is not None:
+            self._trigger_resolution.resolve_top(self._state, self._rules)
+            return
+        self._spell_resolution.resolve_top(self._state, self._rules)
+
+    def _run_sba_and_triggers_loop(self) -> None:
+        if self._rules is None:
+            return
+        StateBasedActionService().apply_all(self._state, self._rules)
+        self._detect_and_queue_triggers_from_new_events()
+        if self._stack_pending_triggers_if_any():
+            return
+        self._priority.assign_to_active_player()
+        self._emit_priority_assigned()

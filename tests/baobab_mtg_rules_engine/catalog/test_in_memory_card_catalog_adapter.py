@@ -3,6 +3,7 @@
 from baobab_mtg_rules_engine.catalog.in_memory_card_catalog_adapter import (
     InMemoryCardCatalogAdapter,
 )
+from baobab_mtg_rules_engine.domain.triggered_ability_definition import TriggeredAbilityDefinition
 
 
 class TestInMemoryCardCatalogAdapter:
@@ -33,3 +34,22 @@ class TestInMemoryCardCatalogAdapter:
         assert adapter.creature_power("grizzly") == 3
         assert adapter.creature_toughness("grizzly") == 3
         assert adapter.creature_power("unknown") == 0
+
+    def test_triggered_ability_definitions_default_empty(self) -> None:
+        """Sans configuration explicite, aucune capacité déclenchée n'est renvoyée."""
+        adapter = InMemoryCardCatalogAdapter(frozenset({"x"}))
+        assert not adapter.triggered_ability_definitions("x")
+
+    def test_triggered_ability_definitions_configured(self) -> None:
+        """Les définitions configurées sont restituées de façon stable."""
+        definition = TriggeredAbilityDefinition(
+            ability_key="x_etb",
+            trigger_kind="etb_self",
+            effect_kind="damage_opponent",
+            amount=1,
+        )
+        adapter = InMemoryCardCatalogAdapter(
+            frozenset({"x"}),
+            triggered_abilities_by_key={"x": (definition,)},
+        )
+        assert adapter.triggered_ability_definitions("x") == (definition,)
